@@ -1,0 +1,48 @@
+# OTel Collector — config del entorno local de AgentLens.
+# Camino: SDK -> OTLP -> [redacción] -> [batch] -> ClickHouse.
+#
+# La redacción aquí es la SEGUNDA barrera de privacidad (la primera es el SDK en
+# cliente). En producción se sustituye/complementa con Microsoft Presidio.
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  # Segunda barrera de PII: bloquea atributos sensibles que el SDK no cubriera.
+  redaction:
+    allow_all_keys: true
+    blocked_values:
+      - "[A-Za-z0-9._%+\\-]+@[A-Za-z0-9.\\-]+\\.[A-Za-z]{2,}"   # email
+      - "\\b[A-Z]{2}\\d{2}[A-Z0-9]{11,30}\\b"                     # IBAN
+      - "\\b(?:\\d[ \\-]?){13,19}\\b"                             # tarjeta
+    summary: debug
+
+  batch:
+    timeout: 1s
+    send_batch_size: 512
+
+exporters:
+  clickhouse:
+    endpoint: tcp://clickhouse:9000?dial_timeout=10s
+    database: agentlens
+    username: agentlens
+    password: agentlens
+    traces_table_name: otel_traces
+    ttl: 720h   # 30 días (retención del plan Starter)
+    create_schema: true
+
+  # Útil para depurar durante el desarrollo.
+  debug:
+    verbosity: normal
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [redaction, batch]
+      exporters: [clickhouse, debug]
