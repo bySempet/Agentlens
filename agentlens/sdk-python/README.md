@@ -24,6 +24,12 @@ agentlens.instrument(api_key="...", tenant_id="acme", agent_id="support-bot")
   privacidad y retención a la vez.
 - **Enriquecimiento.** Todos los spans heredan `tenant.id`, `agent.id` y
   `service.name` vía Resource.
+- **Capa adaptadora de convenciones.** El esquema OTel GenAI está en estado
+  *Development* y cambia entre versiones. AgentLens normaliza alias legacy
+  (`llm.*`, `ai.*`, `gen_ai.usage.prompt_tokens`, …) a un esquema canónico
+  estable, de modo que un cambio de semconv no rompe el contrato del SDK. Las
+  claves se centralizan en `agentlens.GenAI` y la versión del contrato se publica
+  en `agentlens.conventions.version`.
 
 ## Instrumentación manual (sin framework)
 

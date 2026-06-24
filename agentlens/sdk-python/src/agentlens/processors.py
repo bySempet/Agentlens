@@ -3,8 +3,9 @@
 ``AgentLensSpanExporter`` envuelve al exporter real (OTLP) y, por cada span,
 aplica en este orden:
 
-  1. Redacción de PII   (para que no llegue ni al almacén de payloads)
-  2. Externalización de payloads grandes
+  1. Normalización de convenciones (alias legacy/variantes -> esquema canónico)
+  2. Redacción de PII   (para que no llegue ni al almacén de payloads)
+  3. Externalización de payloads grandes
 
 Como los atributos de un span finalizado son inmutables (``BoundedAttributes``
 lanza ``TypeError`` al asignar), reconstruimos un ``ReadableSpan`` nuevo con los
@@ -19,6 +20,7 @@ from opentelemetry.sdk.trace import ReadableSpan
 from opentelemetry.sdk.trace.export import SpanExporter, SpanExportResult
 
 from .config import AgentLensConfig
+from .conventions import normalize_attributes
 from .payloads import (
     LocalFilePayloadStore,
     NoopPayloadStore,
@@ -51,6 +53,11 @@ class AgentLensSpanExporter(SpanExporter):
 
     def _transform(self, span: ReadableSpan) -> ReadableSpan:
         attrs = dict(span.attributes or {})
+
+        # Capa adaptadora de convenciones: homogeneiza el esquema venga de donde
+        # venga el span (helpers propios o auto-instrumentación de terceros)
+        # antes de redactar/externalizar, que ya trabajan contra claves canónicas.
+        attrs = normalize_attributes(attrs)
 
         if self._redactor is not None:
             attrs = self._redactor.redact_attributes(attrs)

@@ -4,6 +4,7 @@ Instrumentación basada en OpenTelemetry GenAI, agnóstica al framework y al
 proveedor de LLM, con redacción de PII en cliente y externalización de payloads.
 """
 from .config import AgentLensConfig
+from .conventions import CONVENTIONS_VERSION, GenAI, normalize_attributes
 from .instrument import (
     agent,
     get_tracer,
@@ -23,5 +24,8 @@ __all__ = [
     "get_tracer",
     "Redactor",
     "AgentLensConfig",
+    "GenAI",
+    "CONVENTIONS_VERSION",
+    "normalize_attributes",
     "__version__",
 ]

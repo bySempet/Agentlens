@@ -6,21 +6,12 @@ variables de entorno (prefijo AGENTLENS_) o por argumentos a ``instrument()``.
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Optional
 
-# Atributos que típicamente contienen el contenido grande (prompts/outputs/
-# argumentos de herramientas). Son los candidatos a externalización y los que
-# con mayor probabilidad contienen PII.
-DEFAULT_CONTENT_ATTRS = (
-    "gen_ai.input.messages",
-    "gen_ai.output.messages",
-    "gen_ai.system_instructions",
-    "gen_ai.tool.call.arguments",
-    "gen_ai.tool.call.result",
-    "gen_ai.prompt",
-    "gen_ai.completion",
-)
+# Los atributos de contenido grande (candidatos a externalización y PII) se
+# definen en la capa de convenciones, fuente única de los nombres de esquema.
+from .conventions import CONTENT_ATTRS as DEFAULT_CONTENT_ATTRS
 
 
 def _env_bool(name: str, default: bool) -> bool:

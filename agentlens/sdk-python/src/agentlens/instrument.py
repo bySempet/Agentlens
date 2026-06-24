@@ -26,6 +26,7 @@ from opentelemetry.sdk.trace.export import (
 )
 
 from .config import AgentLensConfig
+from .conventions import CONVENTIONS_VERSION, GenAI
 from .processors import AgentLensSpanExporter
 from .redaction import Redactor
 
@@ -53,6 +54,9 @@ def _build_resource(cfg: AgentLensConfig) -> Resource:
             "agentlens.tenant.id": cfg.tenant_id or "unknown",
             "agentlens.agent.id": cfg.agent_id,
             "agentlens.sdk.language": "python",
+            # Versión del contrato de convenciones con que se emiten los spans.
+            # El backend la usa para interpretar el esquema de forma estable.
+            "agentlens.conventions.version": CONVENTIONS_VERSION,
         }
     )
 
@@ -150,13 +154,16 @@ def get_tracer(name: str = "agentlens"):
 
 @contextmanager
 def agent(name: str, *, agent_id: Optional[str] = None):
-    """Span ``invoke_agent`` (convención OTel GenAI) para instrumentación manual."""
+    """Span ``invoke_agent`` (convención OTel GenAI) para instrumentación manual.
+
+    Usa las constantes de la capa de convenciones; no hardcodea claves ``gen_ai.*``.
+    """
     tracer = get_tracer()
-    with tracer.start_as_current_span(f"invoke_agent {name}") as span:
-        span.set_attribute("gen_ai.operation.name", "invoke_agent")
-        span.set_attribute("gen_ai.agent.name", name)
+    with tracer.start_as_current_span(f"{GenAI.OP_INVOKE_AGENT} {name}") as span:
+        span.set_attribute(GenAI.OPERATION_NAME, GenAI.OP_INVOKE_AGENT)
+        span.set_attribute(GenAI.AGENT_NAME, name)
         if agent_id:
-            span.set_attribute("gen_ai.agent.id", agent_id)
+            span.set_attribute(GenAI.AGENT_ID, agent_id)
         yield span
 
 
@@ -164,9 +171,9 @@ def agent(name: str, *, agent_id: Optional[str] = None):
 def tool(name: str):
     """Span ``execute_tool`` (convención OTel GenAI) para instrumentación manual."""
     tracer = get_tracer()
-    with tracer.start_as_current_span(f"execute_tool {name}") as span:
-        span.set_attribute("gen_ai.operation.name", "execute_tool")
-        span.set_attribute("gen_ai.tool.name", name)
+    with tracer.start_as_current_span(f"{GenAI.OP_EXECUTE_TOOL} {name}") as span:
+        span.set_attribute(GenAI.OPERATION_NAME, GenAI.OP_EXECUTE_TOOL)
+        span.set_attribute(GenAI.TOOL_NAME, name)
         yield span
 
 
