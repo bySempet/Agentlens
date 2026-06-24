@@ -9,7 +9,10 @@ Implementado y verificado:
 - **`sdk-python/`** — Core Tracing SDK (v0.1). `instrument()` de 3 líneas,
   export OTLP asíncrono, redacción de PII en cliente, externalización de
   payloads, enriquecimiento de spans y helpers de agente/herramienta según las
-  convenciones OTel GenAI. 11 tests en verde; gate de latencia p99 ≈ 0,1 ms.
+  convenciones OTel GenAI. Incluye la **capa adaptadora de convenciones**
+  (E1-T09): aísla el esquema interno del OTel GenAI *Development* y normaliza
+  alias legacy (`llm.*`, `ai.*`, versiones previas de `gen_ai.*`) a un esquema
+  canónico estable. 17 tests en verde; gate de latencia p99 ≈ 0,1 ms.
 - **`deploy/`** — Entorno local: OTel Collector (con redacción como segunda
   barrera) + ClickHouse, vía `docker compose`.
 - **`examples/`** — Agente de ejemplo end-to-end.
@@ -32,13 +35,15 @@ agentlens/
 
 ## Mapa con el backlog
 
-Este incremento cubre: E1-T01..T08 (SDK core + redacción + payloads +
-enriquecimiento + base de auto-instrumentación), E0-T03 (gate de latencia),
-E0-T04 (entorno local) y E2-T01 (Collector base).
+Este incremento cubre: E1-T01..T09 (SDK core + redacción + payloads +
+enriquecimiento + base de auto-instrumentación + **capa adaptadora de
+convenciones**), E0-T03 (gate de latencia), E0-T04 (entorno local) y E2-T01
+(Collector base).
 
-Siguiente paso recomendado del backlog: **E1-T09** (capa adaptadora de
-convenciones) y **E2-T05/E2-T07** (Ingestion Gateway en Go + esquema ClickHouse)
-para cerrar el camino de ingesta del MVP.
+Siguiente paso recomendado del backlog: **E2-T05/E2-T07** (Ingestion Gateway en
+Go + esquema ClickHouse) para cerrar el camino de ingesta del MVP, y **E1-T10/
+T11** (más frameworks + SDK Node), que se apoyan en la capa de convenciones ya
+disponible.
 
 ## Arranque rápido
 

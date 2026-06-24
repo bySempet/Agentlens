@@ -29,6 +29,9 @@ def generate_reply(customer: dict) -> str:
         reply = "Estimado cliente, " + ("gracias por su consulta. " * 300)
         span.set_attribute("gen_ai.output.messages", reply)
         span.set_attribute("gen_ai.usage.output_tokens", 1800)
+        # Clave legacy de un instrumentador antiguo: la capa de convenciones
+        # (E1-T09) la normaliza a gen_ai.usage.input_tokens antes de exportar.
+        span.set_attribute("gen_ai.usage.prompt_tokens", 950)
         return reply
 
 
