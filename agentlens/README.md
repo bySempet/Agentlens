@@ -13,10 +13,12 @@ Implementado y verificado:
   (E1-T09): aísla el esquema interno del OTel GenAI *Development* y normaliza
   alias legacy (`llm.*`, `ai.*`, versiones previas de `gen_ai.*`) a un esquema
   canónico estable. 17 tests en verde; gate de latencia p99 ≈ 0,1 ms.
-- **`ingestion/`** — Ingestion Gateway (Go, E2-T05): OTLP/gRPC con TLS, auth por
-  API key y resolución de tenant. Rechaza claves inválidas, sella el tenant
-  autoritativo en el Resource (anti-spoofing) y reenvía al Collector. Tests de
-  auth y de enrutado end-to-end sobre gRPC real en verde.
+- **`ingestion/`** — Ingestion Gateway (Go, E2-T05/T06): OTLP/gRPC con TLS, auth
+  por API key, resolución de tenant y rate limiting por plan (token-bucket).
+  Rechaza claves inválidas, limita el caudal por tier, sella el tenant
+  autoritativo en el Resource (anti-spoofing) y reenvía al Collector. 18 tests
+  (unit + integración gRPC real, `-race`) en verde; verificado end-to-end
+  cross-language SDK Python → gateway → downstream.
 - **`deploy/`** — Entorno local: OTel Collector (con redacción como segunda
   barrera) + ClickHouse, vía `docker compose`.
 - **`examples/`** — Agente de ejemplo end-to-end.
@@ -28,7 +30,7 @@ agentlens/
 ├── sdk-python/      # ✅ Core Tracing SDK (Python)
 ├── sdk-node/        # ⬜ SDK TypeScript (E1-T11)
 ├── collector/       # ◻️ config base en deploy/; procesadores Go custom (E2-T02)
-├── ingestion/       # ✅ Ingestion Gateway (Go) (E2-T05); ⬜ stream processors
+├── ingestion/       # ✅ Ingestion Gateway (Go) (E2-T05/T06); ⬜ stream processors
 ├── compliance-engine/ # ⬜ Mapeo regulatorio (Python) (E5)
 ├── reporter/        # ⬜ Informes firmados (E5-T05)
 ├── forensics/       # ⬜ Reconstrucción de ejecuciones (E6)
@@ -42,12 +44,12 @@ agentlens/
 Lo cubierto hasta ahora: E1-T01..T09 (SDK core + redacción + payloads +
 enriquecimiento + base de auto-instrumentación + **capa adaptadora de
 convenciones**), E0-T03 (gate de latencia), E0-T04 (entorno local), E2-T01
-(Collector base) y **E2-T05 (Ingestion Gateway en Go)**.
+(Collector base) y **E2-T05/T06 (Ingestion Gateway en Go: auth + rate limiting
+por plan)**.
 
 Siguiente paso recomendado del backlog: **E2-T07** (esquema ClickHouse explícito
-+ ingestión) y **E2-T06** (resolución de tenant por plan + rate limiting, que se
-apoya en la auth del gateway ya disponible). En paralelo, **E1-T10/T11** (más
-frameworks + SDK Node) se apoyan en la capa de convenciones.
++ ingestión), que desbloquea toda la E3 (dashboard). En paralelo, **E1-T10/T11**
+(más frameworks + SDK Node) se apoyan en la capa de convenciones.
 
 ## Arranque rápido
 
