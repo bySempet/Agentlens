@@ -31,6 +31,10 @@ Implementado y verificado:
   OpenAPI** documentado y servido. `TraceStore` desacoplado (ClickHouse + fake en
   memoria). Tests `-race` de auth/paginación/aislamiento/errores, SQL validado
   contra ClickHouse real y smoke del binario.
+- **`frontend/`** — Dashboard Next.js (E3-T03): lista de trazas y detalle con
+  timeline de spans (waterfall), consumiendo la API. Capa de datos con fallback a
+  fixtures. Build (type-check+lint) y render de ambas vistas verificados con
+  Chromium real.
 - **`examples/`** — Agente de ejemplo end-to-end.
 
 ## Estructura objetivo del monorepo
@@ -45,7 +49,7 @@ agentlens/
 ├── reporter/        # ⬜ Informes firmados (E5-T05)
 ├── forensics/       # ⬜ Reconstrucción de ejecuciones (E6)
 ├── api/             # ✅ API de lectura de trazas (Go) (E3-T01/T02: auth+OpenAPI)
-├── frontend/        # ⬜ Dashboard Next.js (E3-T03)
+├── frontend/        # ✅ Dashboard Next.js (E3-T03): lista + timeline de trazas
 ├── policies/        # ⬜ Bundles Rego (E4)
 └── deploy/          # ✅ docker-compose + esquema ClickHouse (E2-T07); ◻️ Helm (E0-T06)
 ```
@@ -57,11 +61,14 @@ enriquecimiento + base de auto-instrumentación + **capa adaptadora de
 convenciones**), E0-T03 (gate de latencia), E0-T04 (entorno local), E2-T01
 (Collector base), **E2-T05/T06 (Ingestion Gateway en Go: auth + rate limiting
 por plan)**, **E2-T07 (esquema ClickHouse explícito + resumen de trazas)** y
-**E3-T01/T02 (API de lectura de trazas: paginación + auth por tenant + OpenAPI)**.
+**E3-T01/T02 (API de lectura de trazas: paginación + auth por tenant + OpenAPI)**
+y **E3-T03 (dashboard Next.js: lista + timeline de trazas)**.
 
-Siguiente paso recomendado del backlog: **E3-T03** (dashboard Next.js: lista y
-detalle de trazas, timeline de spans), ya consumible desde la API. En paralelo,
-**E1-T10/T11** (más frameworks + SDK Node) se apoyan en la capa de convenciones.
+Con esto, el camino visible del MVP (SDK → ingesta → almacenamiento → API →
+dashboard) está completo de extremo a extremo. Siguiente paso recomendado:
+**E3-T04** (vista de conversación GenAI: prompts/outputs/tool calls legibles) y
+**E3-T07** (inventario de agentes). En paralelo, **E1-T10/T11** (más frameworks +
+SDK Node) refuerzan el gancho open-source.
 
 ## Arranque rápido
 
