@@ -1,0 +1,126 @@
+openapi: 3.0.3
+info:
+  title: AgentLens — API de trazas (hot path)
+  description: >
+    API de lectura de trazas de agentes para el dashboard e integraciones.
+    La autenticación es por API key (Bearer); el tenant se deriva de la key, de
+    modo que cada cliente solo accede a sus propias trazas.
+  version: "0.1.0"
+servers:
+  - url: http://localhost:8080
+security:
+  - apiKey: []
+paths:
+  /v1/traces:
+    get:
+      summary: Lista de trazas del tenant
+      description: Resumen por traza, ordenado por inicio descendente, paginado.
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+        - name: offset
+          in: query
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        "200":
+          description: Lista paginada de trazas
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  traces:
+                    type: array
+                    items: { $ref: "#/components/schemas/TraceSummary" }
+                  limit: { type: integer }
+                  offset: { type: integer }
+                  count: { type: integer }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /v1/traces/{traceId}:
+    get:
+      summary: Detalle de una traza (timeline de spans)
+      parameters:
+        - name: traceId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Spans de la traza
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  trace_id: { type: string }
+                  spans:
+                    type: array
+                    items: { $ref: "#/components/schemas/Span" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /healthz:
+    get:
+      summary: Liveness
+      security: []
+      responses:
+        "200": { description: OK }
+  /openapi.yaml:
+    get:
+      summary: Esta especificación OpenAPI
+      security: []
+      responses:
+        "200": { description: Documento OpenAPI }
+components:
+  securitySchemes:
+    apiKey:
+      type: http
+      scheme: bearer
+      description: "API key del tenant: Authorization: Bearer <key>"
+  schemas:
+    TraceSummary:
+      type: object
+      properties:
+        trace_id: { type: string }
+        root_span_name: { type: string }
+        service_name: { type: string }
+        agent_id: { type: string }
+        start_time: { type: string, format: date-time }
+        duration_ms: { type: number }
+        span_count: { type: integer }
+        error_count: { type: integer }
+        input_tokens: { type: integer }
+        output_tokens: { type: integer }
+    Span:
+      type: object
+      properties:
+        span_id: { type: string }
+        parent_span_id: { type: string }
+        span_name: { type: string }
+        genai_operation: { type: string }
+        request_model: { type: string }
+        start_time: { type: string, format: date-time }
+        duration_ms: { type: number }
+        status_code: { type: string }
+        status_message: { type: string }
+    Error:
+      type: object
+      properties:
+        error: { type: string }
+  responses:
+    BadRequest:
+      description: Petición inválida
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Unauthorized:
+      description: Falta o es inválida la API key
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    NotFound:
+      description: Recurso no encontrado
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }

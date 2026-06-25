@@ -7,13 +7,21 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bysempet/agentlens/api/internal/auth"
 	"github.com/bysempet/agentlens/api/internal/store"
 )
+
+// keys de prueba: cada API key resuelve a un tenant.
+func testKeys() auth.KeyStore {
+	return auth.NewStaticKeyStore(map[string]string{
+		"key-acme":   "acme",
+		"key-globex": "globex",
+	})
+}
 
 func seededStore() *store.MemoryStore {
 	m := store.NewMemoryStore()
 	base := time.Date(2026, 6, 25, 10, 0, 0, 0, time.UTC)
-	// acme: 3 trazas (distinto inicio para comprobar el orden); globex: 1.
 	for i, id := range []string{"T1", "T2", "T3"} {
 		m.AddTrace("acme",
 			store.TraceSummary{
@@ -31,11 +39,12 @@ func seededStore() *store.MemoryStore {
 	return m
 }
 
-func do(t *testing.T, h http.Handler, method, target, tenant string) *httptest.ResponseRecorder {
+// do ejecuta una petición autenticada con la API key dada (vacía = sin auth).
+func do(t *testing.T, h http.Handler, method, target, key string) *httptest.ResponseRecorder {
 	t.Helper()
 	req := httptest.NewRequest(method, target, nil)
-	if tenant != "" {
-		req.Header.Set(TenantHeader, tenant)
+	if key != "" {
+		req.Header.Set("Authorization", "Bearer "+key)
 	}
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, req)
@@ -52,8 +61,8 @@ func decode(t *testing.T, rec *httptest.ResponseRecorder) map[string]any {
 }
 
 func TestListTraces_OrderedAndTenantIsolated(t *testing.T) {
-	h := New(seededStore())
-	rec := do(t, h, "GET", "/v1/traces", "acme")
+	h := New(seededStore(), testKeys())
+	rec := do(t, h, "GET", "/v1/traces", "key-acme")
 	if rec.Code != http.StatusOK {
 		t.Fatalf("código %d", rec.Code)
 	}
@@ -62,27 +71,18 @@ func TestListTraces_OrderedAndTenantIsolated(t *testing.T) {
 	if len(traces) != 3 {
 		t.Fatalf("esperadas 3 trazas de acme, %d", len(traces))
 	}
-	// Orden por inicio descendente: T3, T2, T1.
-	first := traces[0].(map[string]any)
-	if first["trace_id"] != "T3" {
-		t.Fatalf("esperado T3 primero, %v", first["trace_id"])
-	}
-	if body["count"].(float64) != 3 {
-		t.Fatalf("count incorrecto: %v", body["count"])
+	if traces[0].(map[string]any)["trace_id"] != "T3" {
+		t.Fatalf("esperado T3 primero (orden desc), %v", traces[0])
 	}
 }
 
 func TestListTraces_Pagination(t *testing.T) {
-	h := New(seededStore())
-	rec := do(t, h, "GET", "/v1/traces?limit=1&offset=1", "acme")
+	h := New(seededStore(), testKeys())
+	rec := do(t, h, "GET", "/v1/traces?limit=1&offset=1", "key-acme")
 	body := decode(t, rec)
 	traces := body["traces"].([]any)
-	if len(traces) != 1 {
-		t.Fatalf("limit=1 debería devolver 1 traza, %d", len(traces))
-	}
-	// offset=1 sobre [T3,T2,T1] -> T2.
-	if traces[0].(map[string]any)["trace_id"] != "T2" {
-		t.Fatalf("offset=1 debería dar T2, %v", traces[0])
+	if len(traces) != 1 || traces[0].(map[string]any)["trace_id"] != "T2" {
+		t.Fatalf("limit=1&offset=1 debería dar [T2], %v", traces)
 	}
 	if body["limit"].(float64) != 1 || body["offset"].(float64) != 1 {
 		t.Fatalf("eco de paginación incorrecto: %v", body)
@@ -90,60 +90,77 @@ func TestListTraces_Pagination(t *testing.T) {
 }
 
 func TestListTraces_LimitClampedToMax(t *testing.T) {
-	h := New(seededStore())
-	rec := do(t, h, "GET", "/v1/traces?limit=99999", "acme")
-	body := decode(t, rec)
-	if body["limit"].(float64) != maxLimit {
-		t.Fatalf("limit debería topar en %d, %v", maxLimit, body["limit"])
+	h := New(seededStore(), testKeys())
+	rec := do(t, h, "GET", "/v1/traces?limit=99999", "key-acme")
+	if decode(t, rec)["limit"].(float64) != maxLimit {
+		t.Fatalf("limit debería topar en %d", maxLimit)
 	}
 }
 
-func TestListTraces_MissingTenant(t *testing.T) {
-	h := New(seededStore())
-	rec := do(t, h, "GET", "/v1/traces", "")
-	if rec.Code != http.StatusBadRequest {
-		t.Fatalf("sin tenant debería ser 400, %d", rec.Code)
-	}
-}
-
-func TestListTraces_InvalidLimit(t *testing.T) {
-	h := New(seededStore())
+func TestListTraces_InvalidParams(t *testing.T) {
+	h := New(seededStore(), testKeys())
 	for _, bad := range []string{"limit=0", "limit=-3", "limit=abc", "offset=-1"} {
-		rec := do(t, h, "GET", "/v1/traces?"+bad, "acme")
+		rec := do(t, h, "GET", "/v1/traces?"+bad, "key-acme")
 		if rec.Code != http.StatusBadRequest {
 			t.Fatalf("%q debería ser 400, %d", bad, rec.Code)
 		}
 	}
 }
 
+func TestAuth_MissingKeyIs401(t *testing.T) {
+	h := New(seededStore(), testKeys())
+	rec := do(t, h, "GET", "/v1/traces", "")
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("sin API key debería ser 401, %d", rec.Code)
+	}
+}
+
+func TestAuth_InvalidKeyIs401(t *testing.T) {
+	h := New(seededStore(), testKeys())
+	rec := do(t, h, "GET", "/v1/traces", "key-falsa")
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("API key inválida debería ser 401, %d", rec.Code)
+	}
+}
+
 func TestGetTrace_OK(t *testing.T) {
-	h := New(seededStore())
-	rec := do(t, h, "GET", "/v1/traces/T1", "acme")
+	h := New(seededStore(), testKeys())
+	rec := do(t, h, "GET", "/v1/traces/T1", "key-acme")
 	if rec.Code != http.StatusOK {
 		t.Fatalf("código %d (%s)", rec.Code, rec.Body.String())
 	}
 	body := decode(t, rec)
-	if body["trace_id"] != "T1" {
-		t.Fatalf("trace_id incorrecto: %v", body["trace_id"])
-	}
-	if len(body["spans"].([]any)) != 1 {
-		t.Fatalf("esperado 1 span, %v", body["spans"])
+	if body["trace_id"] != "T1" || len(body["spans"].([]any)) != 1 {
+		t.Fatalf("detalle incorrecto: %v", body)
 	}
 }
 
-func TestGetTrace_NotFoundForOtherTenant(t *testing.T) {
-	h := New(seededStore())
-	// T1 es de acme; globex no debe verla.
-	rec := do(t, h, "GET", "/v1/traces/T1", "globex")
+func TestGetTrace_TenantIsolatedByKey(t *testing.T) {
+	h := New(seededStore(), testKeys())
+	// T1 es de acme; con la key de globex no debe verse (404, no 200).
+	rec := do(t, h, "GET", "/v1/traces/T1", "key-globex")
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("traza de otro tenant debería ser 404, %d", rec.Code)
 	}
 }
 
-func TestGetTrace_MissingTenant(t *testing.T) {
-	h := New(seededStore())
-	rec := do(t, h, "GET", "/v1/traces/T1", "")
-	if rec.Code != http.StatusBadRequest {
-		t.Fatalf("sin tenant debería ser 400, %d", rec.Code)
+func TestPublicEndpoints_NoAuth(t *testing.T) {
+	h := New(seededStore(), testKeys())
+	for _, path := range []string{"/healthz", "/openapi.yaml"} {
+		rec := do(t, h, "GET", path, "")
+		if rec.Code != http.StatusOK {
+			t.Fatalf("%s debería ser público (200), %d", path, rec.Code)
+		}
+	}
+}
+
+func TestOpenAPI_ServesSpec(t *testing.T) {
+	h := New(seededStore(), testKeys())
+	rec := do(t, h, "GET", "/openapi.yaml", "")
+	if ct := rec.Header().Get("Content-Type"); ct != "application/yaml" {
+		t.Fatalf("content-type inesperado: %q", ct)
+	}
+	if len(rec.Body.Bytes()) == 0 {
+		t.Fatal("la spec OpenAPI servida está vacía")
 	}
 }

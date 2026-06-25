@@ -7,41 +7,42 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/bysempet/agentlens/api/internal/auth"
 	"github.com/bysempet/agentlens/api/internal/store"
+	"github.com/bysempet/agentlens/api/spec"
 )
-
-// TenantHeader es la cabecera de la que se lee el tenant. En producción la
-// fijará el gateway/auth tras validar la sesión; aquí es el punto de entrada.
-const TenantHeader = "X-AgentLens-Tenant"
 
 const (
 	defaultLimit = 50
 	maxLimit     = 200
 )
 
-// Handler enruta las peticiones de la API contra un TraceStore.
-type Handler struct {
-	store store.TraceStore
-	mux   *http.ServeMux
-}
-
-// New construye el handler y registra las rutas.
-func New(s store.TraceStore) *Handler {
-	h := &Handler{store: s, mux: http.NewServeMux()}
-	h.mux.HandleFunc("GET /v1/traces", h.listTraces)
-	h.mux.HandleFunc("GET /v1/traces/{traceId}", h.getTrace)
-	h.mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
+// New construye el handler HTTP: registra las rutas y las envuelve con la
+// autenticación por API key. /healthz y /openapi.yaml son públicas.
+func New(s store.TraceStore, keys auth.KeyStore) http.Handler {
+	h := &handler{store: s}
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /v1/traces", h.listTraces)
+	mux.HandleFunc("GET /v1/traces/{traceId}", h.getTrace)
+	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
-	return h
+	mux.HandleFunc("GET /openapi.yaml", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/yaml")
+		_, _ = w.Write(spec.OpenAPIYAML)
+	})
+	return auth.Middleware(mux, keys, "/healthz", "/openapi.yaml")
 }
 
-func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) { h.mux.ServeHTTP(w, r) }
+// handler agrupa los manejadores sobre un TraceStore.
+type handler struct {
+	store store.TraceStore
+}
 
-func (h *Handler) listTraces(w http.ResponseWriter, r *http.Request) {
-	tenant := r.Header.Get(TenantHeader)
-	if tenant == "" {
-		writeError(w, http.StatusBadRequest, "falta la cabecera "+TenantHeader)
+func (h *handler) listTraces(w http.ResponseWriter, r *http.Request) {
+	tenant, ok := auth.TenantFromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "no autenticado")
 		return
 	}
 	page, err := parsePage(r)
@@ -62,10 +63,10 @@ func (h *Handler) listTraces(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (h *Handler) getTrace(w http.ResponseWriter, r *http.Request) {
-	tenant := r.Header.Get(TenantHeader)
-	if tenant == "" {
-		writeError(w, http.StatusBadRequest, "falta la cabecera "+TenantHeader)
+func (h *handler) getTrace(w http.ResponseWriter, r *http.Request) {
+	tenant, ok := auth.TenantFromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "no autenticado")
 		return
 	}
 	traceID := r.PathValue("traceId")
