@@ -20,7 +20,11 @@ Implementado y verificado:
   (unit + integración gRPC real, `-race`) en verde; verificado end-to-end
   cross-language SDK Python → gateway → downstream.
 - **`deploy/`** — Entorno local: OTel Collector (con redacción como segunda
-  barrera) + ClickHouse, vía `docker compose`.
+  barrera) + ClickHouse, vía `docker compose`. **Esquema ClickHouse explícito
+  (E2-T07)**: tabla de spans compatible con el exporter OTel + columnas
+  materializadas (tenant/agent/tokens), ORDER BY tenant-first, índices de salto
+  y vista materializada de resumen de trazas para el dashboard. Verificado con
+  ClickHouse real (chDB): inserts, aislamiento por tenant y queries sub-ms.
 - **`examples/`** — Agente de ejemplo end-to-end.
 
 ## Estructura objetivo del monorepo
@@ -36,7 +40,7 @@ agentlens/
 ├── forensics/       # ⬜ Reconstrucción de ejecuciones (E6)
 ├── frontend/        # ⬜ Dashboard Next.js (E3-T03)
 ├── policies/        # ⬜ Bundles Rego (E4)
-└── deploy/          # ✅ docker-compose local; ◻️ Helm charts (E0-T06)
+└── deploy/          # ✅ docker-compose + esquema ClickHouse (E2-T07); ◻️ Helm (E0-T06)
 ```
 
 ## Mapa con el backlog
@@ -44,12 +48,13 @@ agentlens/
 Lo cubierto hasta ahora: E1-T01..T09 (SDK core + redacción + payloads +
 enriquecimiento + base de auto-instrumentación + **capa adaptadora de
 convenciones**), E0-T03 (gate de latencia), E0-T04 (entorno local), E2-T01
-(Collector base) y **E2-T05/T06 (Ingestion Gateway en Go: auth + rate limiting
-por plan)**.
+(Collector base), **E2-T05/T06 (Ingestion Gateway en Go: auth + rate limiting
+por plan)** y **E2-T07 (esquema ClickHouse explícito + resumen de trazas)**.
 
-Siguiente paso recomendado del backlog: **E2-T07** (esquema ClickHouse explícito
-+ ingestión), que desbloquea toda la E3 (dashboard). En paralelo, **E1-T10/T11**
-(más frameworks + SDK Node) se apoyan en la capa de convenciones.
+Siguiente paso recomendado del backlog: **E3-T01** (API hot path de lectura de
+trazas sobre ClickHouse), ya desbloqueado por el esquema, y **E3-T02/T03** para
+el dashboard. En paralelo, **E1-T10/T11** (más frameworks + SDK Node) se apoyan
+en la capa de convenciones.
 
 ## Arranque rápido
 

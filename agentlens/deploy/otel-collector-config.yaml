@@ -33,8 +33,10 @@ exporters:
     username: agentlens
     password: agentlens
     traces_table_name: otel_traces
-    ttl: 720h   # 30 días (retención del plan Starter)
-    create_schema: true
+    # AgentLens posee el esquema (deploy/clickhouse/init.sql, E2-T07): tenant-first
+    # ORDER BY, columnas materializadas y vista de resumen de trazas. Por eso el
+    # exporter NO autocrea ni gestiona TTL/esquema; solo inserta por columna.
+    create_schema: false
 
   # Útil para depurar durante el desarrollo.
   debug:
