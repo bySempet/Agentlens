@@ -12,7 +12,12 @@ Implementado y verificado:
   convenciones OTel GenAI. Incluye la **capa adaptadora de convenciones**
   (E1-T09): aísla el esquema interno del OTel GenAI *Development* y normaliza
   alias legacy (`llm.*`, `ai.*`, versiones previas de `gen_ai.*`) a un esquema
-  canónico estable. 17 tests en verde; gate de latencia p99 ≈ 0,1 ms.
+  canónico estable. Auto-instrumentación resiliente y ampliada (E1-T10): OpenAI,
+  LangChain/LangGraph, CrewAI, AutoGen, Pydantic AI, Bedrock. 23 tests en verde;
+  gate de latencia p99 ≈ 0,1 ms.
+- **`sdk-node/`** — SDK TypeScript `@agentlens/node` (E1-T11), paridad funcional
+  con Python: instrument 3 líneas, enriquecimiento, convenciones, redacción PII y
+  externalización de payloads. 11 tests (node:test) en verde; typecheck y build.
 - **`ingestion/`** — Ingestion Gateway (Go, E2-T05/T06): OTLP/gRPC con TLS, auth
   por API key, resolución de tenant y rate limiting por plan (token-bucket).
   Rechaza claves inválidas, limita el caudal por tier, sella el tenant
@@ -42,7 +47,7 @@ Implementado y verificado:
 ```
 agentlens/
 ├── sdk-python/      # ✅ Core Tracing SDK (Python)
-├── sdk-node/        # ⬜ SDK TypeScript (E1-T11)
+├── sdk-node/        # ✅ SDK TypeScript @agentlens/node (E1-T11)
 ├── collector/       # ◻️ config base en deploy/; procesadores Go custom (E2-T02)
 ├── ingestion/       # ✅ Ingestion Gateway (Go) (E2-T05/T06); ⬜ stream processors
 ├── compliance-engine/ # ⬜ Mapeo regulatorio (Python) (E5)
@@ -56,19 +61,18 @@ agentlens/
 
 ## Mapa con el backlog
 
-Lo cubierto hasta ahora: E1-T01..T09 (SDK core + redacción + payloads +
-enriquecimiento + base de auto-instrumentación + **capa adaptadora de
-convenciones**), E0-T03 (gate de latencia), E0-T04 (entorno local), E2-T01
-(Collector base), **E2-T05/T06 (Ingestion Gateway en Go: auth + rate limiting
-por plan)**, **E2-T07 (esquema ClickHouse explícito + resumen de trazas)** y
-**E3-T01/T02 (API de lectura de trazas: paginación + auth por tenant + OpenAPI)**
-y **E3-T03 (dashboard Next.js: lista + timeline de trazas)**.
+Lo cubierto hasta ahora: E1-T01..T11 (SDK Python core + convenciones +
+auto-instrumentación ampliada + **SDK TypeScript**), E0-T03 (gate de latencia),
+E0-T04 (entorno local), E2-T01 (Collector base), **E2-T05/T06 (Ingestion Gateway
+en Go: auth + rate limiting por plan)**, **E2-T07 (esquema ClickHouse explícito +
+resumen de trazas)**, **E3-T01/T02 (API de lectura de trazas: paginación + auth
+por tenant + OpenAPI)** y **E3-T03 (dashboard Next.js: lista + timeline)**.
 
 Con esto, el camino visible del MVP (SDK → ingesta → almacenamiento → API →
-dashboard) está completo de extremo a extremo. Siguiente paso recomendado:
-**E3-T04** (vista de conversación GenAI: prompts/outputs/tool calls legibles) y
-**E3-T07** (inventario de agentes). En paralelo, **E1-T10/T11** (más frameworks +
-SDK Node) refuerzan el gancho open-source.
+dashboard) está completo de extremo a extremo, y ambos SDKs (Python + Node)
+publicables. Siguiente paso recomendado: **E3-T04** (vista de conversación GenAI:
+prompts/outputs/tool calls legibles), **E3-T07** (inventario de agentes, requiere
+E2-T08 PostgreSQL) y **E1-T13/T14** (docs + publicación open-source PyPI/npm).
 
 ## Arranque rápido
 
