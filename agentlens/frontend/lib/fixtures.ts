@@ -53,6 +53,7 @@ export const fixtureSpans: Record<string, Span[]> = {
       duration_ms: 5.0,
       status_code: "STATUS_CODE_OK",
       status_message: "",
+      system_instructions: "Eres el asistente de soporte de ACME. Sé conciso.",
     },
     {
       span_id: "s2",
@@ -64,6 +65,10 @@ export const fixtureSpans: Record<string, Span[]> = {
       duration_ms: 3.0,
       status_code: "STATUS_CODE_OK",
       status_message: "",
+      input_messages:
+        '[{"role":"user","content":"¿Cuál es el estado de mi pedido 1234?"}]',
+      output_messages:
+        '[{"role":"assistant","content":"Tu pedido 1234 está en reparto y llega hoy."}]',
     },
   ],
   "4b8d0c5f1a": [

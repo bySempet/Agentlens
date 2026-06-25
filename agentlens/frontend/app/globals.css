@@ -94,3 +94,13 @@ tbody tr:hover { background: var(--panel); cursor: pointer; }
 }
 .bar.err { background: linear-gradient(90deg, #b3322c, #f85149); }
 .op { font-size: 11px; color: var(--muted); }
+
+/* Vista de conversación (chat) */
+.section-title { font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; margin: 0 0 12px; }
+.chat { display: flex; flex-direction: column; gap: 10px; }
+.turn { max-width: 78%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); white-space: pre-wrap; word-break: break-word; }
+.turn .who { font-size: 11px; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.3px; }
+.turn.system { align-self: center; max-width: 92%; background: #15203a; border-style: dashed; }
+.turn.user { align-self: flex-end; background: #1d2b1f; }
+.turn.assistant { align-self: flex-start; background: var(--panel-2); }
+.turn.tool { align-self: flex-start; max-width: 92%; background: #241c12; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }

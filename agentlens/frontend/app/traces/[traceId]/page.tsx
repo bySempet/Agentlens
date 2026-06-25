@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTrace } from "@/lib/api";
+import { buildConversation } from "@/lib/conversation";
 import type { Span } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -46,6 +47,7 @@ export default async function TraceDetailPage({
 
   const { rows, totalMs } = layout(spans);
   const errors = spans.filter((s) => s.status_code === "STATUS_CODE_ERROR").length;
+  const conversation = buildConversation(spans);
 
   return (
     <main className="container">
@@ -76,7 +78,22 @@ export default async function TraceDetailPage({
         </div>
       </div>
 
+      {conversation.length > 0 && (
+        <div className="card">
+          <p className="section-title">Conversación</p>
+          <div className="chat" data-testid="conversation">
+            {conversation.map((turn, i) => (
+              <div className={`turn ${turn.kind}`} key={`${turn.spanId}-${i}`}>
+                <div className="who">{turn.role}</div>
+                <div>{turn.text}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="card">
+        <p className="section-title">Timeline de spans</p>
         <div className="timeline" data-testid="timeline">
           {rows.map(({ span, leftPct, widthPct }) => {
             const isErr = span.status_code === "STATUS_CODE_ERROR";

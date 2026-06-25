@@ -23,7 +23,7 @@ type TraceSummary struct {
 	OutputTokens uint64    `json:"output_tokens"`
 }
 
-// Span es un span dentro del detalle de una traza (timeline).
+// Span es un span dentro del detalle de una traza (timeline + conversación).
 type Span struct {
 	SpanID         string    `json:"span_id"`
 	ParentSpanID   string    `json:"parent_span_id"`
@@ -34,6 +34,15 @@ type Span struct {
 	DurationMs     float64   `json:"duration_ms"`
 	StatusCode     string    `json:"status_code"`
 	StatusMessage  string    `json:"status_message"`
+
+	// Contenido GenAI para la vista de conversación (E3-T04). Pueden venir
+	// vacíos, redactados o como referencia (agentlens://payload/...) según la
+	// política de privacidad del SDK.
+	SystemInstructions string `json:"system_instructions"`
+	InputMessages      string `json:"input_messages"`
+	OutputMessages     string `json:"output_messages"`
+	ToolArguments      string `json:"tool_arguments"`
+	ToolResult         string `json:"tool_result"`
 }
 
 // Page describe una petición de paginación ya validada.

@@ -36,10 +36,10 @@ Implementado y verificado:
   OpenAPI** documentado y servido. `TraceStore` desacoplado (ClickHouse + fake en
   memoria). Tests `-race` de auth/paginación/aislamiento/errores, SQL validado
   contra ClickHouse real y smoke del binario.
-- **`frontend/`** — Dashboard Next.js (E3-T03): lista de trazas y detalle con
-  timeline de spans (waterfall), consumiendo la API. Capa de datos con fallback a
-  fixtures. Build (type-check+lint) y render de ambas vistas verificados con
-  Chromium real.
+- **`frontend/`** — Dashboard Next.js (E3-T03/T04): lista de trazas y detalle con
+  **vista de conversación GenAI** (chat-style) y **timeline de spans** (waterfall),
+  consumiendo la API. Capa de datos con fallback a fixtures. Build (type-check) y
+  render de las vistas verificados con Chromium real.
 - **`examples/`** — Agente de ejemplo end-to-end.
 
 ## Estructura objetivo del monorepo
@@ -54,7 +54,7 @@ agentlens/
 ├── reporter/        # ⬜ Informes firmados (E5-T05)
 ├── forensics/       # ⬜ Reconstrucción de ejecuciones (E6)
 ├── api/             # ✅ API de lectura de trazas (Go) (E3-T01/T02: auth+OpenAPI)
-├── frontend/        # ✅ Dashboard Next.js (E3-T03): lista + timeline de trazas
+├── frontend/        # ✅ Dashboard Next.js (E3-T03/T04): conversación + timeline
 ├── policies/        # ⬜ Bundles Rego (E4)
 └── deploy/          # ✅ docker-compose + esquema ClickHouse (E2-T07); ◻️ Helm (E0-T06)
 ```
@@ -67,7 +67,8 @@ E0-T03 (gate de latencia), base de E0-T02 (CI), E0-T04 (entorno local), E2-T01
 (Collector base), **E2-T05/T06 (Ingestion Gateway
 en Go: auth + rate limiting por plan)**, **E2-T07 (esquema ClickHouse explícito +
 resumen de trazas)**, **E3-T01/T02 (API de lectura de trazas: paginación + auth
-por tenant + OpenAPI)** y **E3-T03 (dashboard Next.js: lista + timeline)**.
+por tenant + OpenAPI)** y **E3-T03/T04 (dashboard Next.js: lista, timeline y
+vista de conversación GenAI)**.
 
 Con esto, el camino visible del MVP (SDK → ingesta → almacenamiento → API →
 dashboard) está completo de extremo a extremo, y ambos SDKs (Python + Node) están
@@ -76,10 +77,10 @@ dashboard) está completo de extremo a extremo, y ambos SDKs (Python + Node) est
 tutorial de integración en 5 pasos (`docs/integration.md`) y workflows de CI y
 release (PyPI Trusted Publishing + npm) en `.github/workflows/`.
 
-Siguiente paso recomendado: **E3-T04** (vista de conversación GenAI:
-prompts/outputs/tool calls legibles) y **E2-T08/E3-T07** (PostgreSQL + inventario
-de agentes). La publicación efectiva a PyPI/npm requiere etiquetar un release y
-configurar los secretos/Trusted Publishing del repositorio.
+Siguiente paso recomendado: **E2-T08/E3-T07** (PostgreSQL + inventario de
+agentes), **E3-T05** (live feed por WebSocket) o **E3-T06** (dashboard de coste).
+La publicación efectiva a PyPI/npm requiere etiquetar un release y configurar los
+secretos/Trusted Publishing del repositorio.
 
 ## Arranque rápido
 

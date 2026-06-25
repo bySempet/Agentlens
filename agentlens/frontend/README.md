@@ -8,9 +8,12 @@ la API hot path (E3-T01/T02).
 
 - **`/`** — lista de trazas (root span, agente, servicio, inicio, duración,
   spans, tokens, estado). Cada fila navega al detalle.
-- **`/traces/{traceId}`** — detalle paso a paso: resumen de la traza y un
-  timeline donde cada span se posiciona por su offset y duración reales, con el
-  operation/model GenAI y marca de error.
+- **`/traces/{traceId}`** — detalle paso a paso:
+  - **Conversación (E3-T04)**: render chat-style de los atributos `gen_ai.*`
+    (system / user / assistant / tool calls), tolerante a contenido vacío,
+    redactado o externalizado.
+  - **Timeline**: cada span posicionado por su offset y duración reales, con el
+    operation/model GenAI y marca de error.
 
 ## Datos
 

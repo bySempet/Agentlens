@@ -39,7 +39,12 @@ SELECT
     Timestamp        AS start_time,
     Duration / 1e6   AS duration_ms,
     StatusCode,
-    StatusMessage
+    StatusMessage,
+    SpanAttributes['gen_ai.system_instructions']  AS system_instructions,
+    SpanAttributes['gen_ai.input.messages']       AS input_messages,
+    SpanAttributes['gen_ai.output.messages']      AS output_messages,
+    SpanAttributes['gen_ai.tool.call.arguments']  AS tool_arguments,
+    SpanAttributes['gen_ai.tool.call.result']     AS tool_result
 FROM agentlens.otel_traces
 WHERE TenantId = ? AND TraceId = ?
 ORDER BY Timestamp`
@@ -100,6 +105,8 @@ func (s *ClickHouseStore) GetTrace(ctx context.Context, tenantID, traceID string
 			&sp.SpanID, &sp.ParentSpanID, &sp.SpanName, &sp.GenAIOperation,
 			&sp.RequestModel, &sp.StartTime, &sp.DurationMs,
 			&sp.StatusCode, &sp.StatusMessage,
+			&sp.SystemInstructions, &sp.InputMessages, &sp.OutputMessages,
+			&sp.ToolArguments, &sp.ToolResult,
 		); err != nil {
 			return nil, err
 		}

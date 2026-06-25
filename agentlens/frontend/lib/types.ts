@@ -23,4 +23,12 @@ export interface Span {
   duration_ms: number;
   status_code: string;
   status_message: string;
+
+  // Contenido GenAI para la vista de conversación (E3-T04). Vacío, redactado o
+  // referencia (agentlens://payload/...) según la política de privacidad.
+  system_instructions?: string;
+  input_messages?: string;
+  output_messages?: string;
+  tool_arguments?: string;
+  tool_result?: string;
 }
