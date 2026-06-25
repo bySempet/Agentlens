@@ -27,22 +27,13 @@ from opentelemetry.sdk.trace.export import (
 
 from .config import AgentLensConfig
 from .conventions import CONVENTIONS_VERSION, GenAI
+from .instrumentation import activate as activate_instrumentation
 from .processors import AgentLensSpanExporter
 from .redaction import Redactor
 
 logger = logging.getLogger("agentlens")
 
 _PROVIDER: Optional[TracerProvider] = None
-
-# Lista de auto-instrumentadores conocidos (módulo, clase). Se activan de forma
-# best-effort: si el framework/instrumentación no está instalado, se omite sin
-# romper nada. La capa adaptadora de convenciones (ver E1-T09) se aplica encima.
-_AUTO_INSTRUMENTORS = [
-    ("opentelemetry.instrumentation.openai_v2", "OpenAIInstrumentor"),
-    ("opentelemetry.instrumentation.langchain", "LangchainInstrumentor"),
-    ("opentelemetry.instrumentation.crewai", "CrewAIInstrumentor"),
-    ("opentelemetry.instrumentation.bedrock", "BedrockInstrumentor"),
-]
 
 
 def _build_resource(cfg: AgentLensConfig) -> Resource:
@@ -71,17 +62,6 @@ def _build_inner_exporter(cfg: AgentLensConfig) -> SpanExporter:
     return OTLPSpanExporter(endpoint=cfg.endpoint, headers=headers, insecure=True)
 
 
-def _activate_auto_instrumentation() -> list:
-    activated = []
-    for module_name, class_name in _AUTO_INSTRUMENTORS:
-        try:
-            module = __import__(module_name, fromlist=[class_name])
-            instrumentor_cls = getattr(module, class_name)
-            instrumentor_cls().instrument()
-            activated.append(class_name)
-        except Exception:  # noqa: BLE001 - best-effort por diseño
-            continue
-    return activated
 
 
 def instrument(
@@ -137,9 +117,8 @@ def instrument(
     _PROVIDER = provider
 
     if auto_instrument:
-        activated = _activate_auto_instrumentation()
-        if activated:
-            logger.info("AgentLens auto-instrumentó: %s", ", ".join(activated))
+        result = activate_instrumentation()
+        logger.info("AgentLens auto-instrumentación -> %s", result.summary())
 
     logger.info(
         "AgentLens activo (tenant=%s, agent=%s, redact_pii=%s, payload_mode=%s)",

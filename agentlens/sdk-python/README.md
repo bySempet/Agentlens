@@ -9,8 +9,14 @@ OpenTelemetry GenAI, agnóstica al framework y al proveedor de LLM, con
 ```python
 import agentlens
 agentlens.instrument(api_key="...", tenant_id="acme", agent_id="support-bot")
-# A partir de aquí, OpenAI / LangChain / CrewAI se auto-instrumentan.
+# A partir de aquí se auto-instrumentan los frameworks presentes:
+# OpenAI, LangChain/LangGraph, CrewAI, AutoGen, Pydantic AI y Bedrock Agents.
 ```
+
+La activación es **resiliente** (E1-T10): los frameworks no instalados se omiten,
+y un instrumentador que falle se aísla sin tumbar a los demás. La matriz de
+soportados está en `agentlens.instrumentation` y `agentlens.activate()` devuelve
+qué se activó/omitió/falló.
 
 ## Qué hace por defecto
 

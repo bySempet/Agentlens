@@ -20,8 +20,11 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# Instrumentadores por framework (best-effort en runtime; instala el que uses).
 openai = ["opentelemetry-instrumentation-openai-v2"]
 langchain = ["opentelemetry-instrumentation-langchain"]
+crewai = ["opentelemetry-instrumentation-crewai"]
+bedrock = ["opentelemetry-instrumentation-bedrock"]
 dev = ["pytest>=8", "pytest-cov"]
 
 [tool.setuptools.packages.find]
