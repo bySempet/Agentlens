@@ -12,12 +12,18 @@
       "import": "./dist/index.js"
     }
   },
-  "files": ["dist"],
+  "files": ["dist", "README.md", "LICENSE"],
   "keywords": ["llm", "agents", "observability", "opentelemetry", "governance", "eu-ai-act"],
+  "homepage": "https://github.com/bysempet/agentlens/tree/main/sdk-node",
+  "repository": { "type": "git", "url": "git+https://github.com/bysempet/agentlens.git", "directory": "sdk-node" },
+  "bugs": { "url": "https://github.com/bysempet/agentlens/issues" },
+  "publishConfig": { "access": "public" },
+  "engines": { "node": ">=18" },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "test": "node --import tsx --test test/*.test.ts",
-    "typecheck": "tsc -p tsconfig.json"
+    "typecheck": "tsc -p tsconfig.json",
+    "prepack": "npm run build"
   },
   "dependencies": {
     "@opentelemetry/api": "^1.9.0",

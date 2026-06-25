@@ -61,18 +61,25 @@ agentlens/
 
 ## Mapa con el backlog
 
-Lo cubierto hasta ahora: E1-T01..T11 (SDK Python core + convenciones +
-auto-instrumentación ampliada + **SDK TypeScript**), E0-T03 (gate de latencia),
-E0-T04 (entorno local), E2-T01 (Collector base), **E2-T05/T06 (Ingestion Gateway
+Lo cubierto hasta ahora: E1-T01..T14 (SDK Python core + convenciones +
+auto-instrumentación ampliada + **SDK TypeScript** + **docs + publicación**),
+E0-T03 (gate de latencia), base de E0-T02 (CI), E0-T04 (entorno local), E2-T01
+(Collector base), **E2-T05/T06 (Ingestion Gateway
 en Go: auth + rate limiting por plan)**, **E2-T07 (esquema ClickHouse explícito +
 resumen de trazas)**, **E3-T01/T02 (API de lectura de trazas: paginación + auth
 por tenant + OpenAPI)** y **E3-T03 (dashboard Next.js: lista + timeline)**.
 
 Con esto, el camino visible del MVP (SDK → ingesta → almacenamiento → API →
-dashboard) está completo de extremo a extremo, y ambos SDKs (Python + Node)
-publicables. Siguiente paso recomendado: **E3-T04** (vista de conversación GenAI:
-prompts/outputs/tool calls legibles), **E3-T07** (inventario de agentes, requiere
-E2-T08 PostgreSQL) y **E1-T13/T14** (docs + publicación open-source PyPI/npm).
+dashboard) está completo de extremo a extremo, y ambos SDKs (Python + Node) están
+**listos para publicar** (E1-T13/T14): LICENSE Apache-2.0, metadatos completos,
+`py.typed`, builds de distribución verificados (`python -m build` / `npm pack`),
+tutorial de integración en 5 pasos (`docs/integration.md`) y workflows de CI y
+release (PyPI Trusted Publishing + npm) en `.github/workflows/`.
+
+Siguiente paso recomendado: **E3-T04** (vista de conversación GenAI:
+prompts/outputs/tool calls legibles) y **E2-T08/E3-T07** (PostgreSQL + inventario
+de agentes). La publicación efectiva a PyPI/npm requiere etiquetar un release y
+configurar los secretos/Trusted Publishing del repositorio.
 
 ## Arranque rápido
 
