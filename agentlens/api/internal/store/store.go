@@ -1,0 +1,53 @@
+// Package store define el acceso de lectura a trazas (E3-T01). La interfaz
+// TraceStore desacopla la API HTTP del backend concreto (ClickHouse en prod,
+// fake en memoria en tests).
+package store
+
+import (
+	"context"
+	"time"
+)
+
+// TraceSummary es una fila de la lista de trazas del dashboard. Procede de la
+// vista materializada agentlens.trace_summary (resumen por traza).
+type TraceSummary struct {
+	TraceID      string    `json:"trace_id"`
+	RootSpanName string    `json:"root_span_name"`
+	ServiceName  string    `json:"service_name"`
+	AgentID      string    `json:"agent_id"`
+	StartTime    time.Time `json:"start_time"`
+	DurationMs   float64   `json:"duration_ms"`
+	SpanCount    uint64    `json:"span_count"`
+	ErrorCount   uint64    `json:"error_count"`
+	InputTokens  uint64    `json:"input_tokens"`
+	OutputTokens uint64    `json:"output_tokens"`
+}
+
+// Span es un span dentro del detalle de una traza (timeline).
+type Span struct {
+	SpanID         string    `json:"span_id"`
+	ParentSpanID   string    `json:"parent_span_id"`
+	SpanName       string    `json:"span_name"`
+	GenAIOperation string    `json:"genai_operation"`
+	RequestModel   string    `json:"request_model"`
+	StartTime      time.Time `json:"start_time"`
+	DurationMs     float64   `json:"duration_ms"`
+	StatusCode     string    `json:"status_code"`
+	StatusMessage  string    `json:"status_message"`
+}
+
+// Page describe una petición de paginación ya validada.
+type Page struct {
+	Limit  int
+	Offset int
+}
+
+// TraceStore es el contrato de lectura sobre el almacén de trazas.
+type TraceStore interface {
+	// ListTraces devuelve el resumen de las trazas de un tenant, paginado y
+	// ordenado por inicio descendente (más recientes primero).
+	ListTraces(ctx context.Context, tenantID string, page Page) ([]TraceSummary, error)
+	// GetTrace devuelve los spans de una traza concreta de un tenant, ordenados
+	// por tiempo. Lista vacía si la traza no existe para ese tenant.
+	GetTrace(ctx context.Context, tenantID, traceID string) ([]Span, error)
+}

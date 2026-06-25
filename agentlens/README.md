@@ -25,6 +25,11 @@ Implementado y verificado:
   materializadas (tenant/agent/tokens), ORDER BY tenant-first, índices de salto
   y vista materializada de resumen de trazas para el dashboard. Verificado con
   ClickHouse real (chDB): inserts, aislamiento por tenant y queries sub-ms.
+- **`api/`** — API hot path (Go, E3-T01): lectura de trazas sobre ClickHouse.
+  Endpoints de listado (paginado, desde la vista de resumen) y detalle de traza,
+  con tenant por cabecera. `TraceStore` desacoplado (ClickHouse + fake en
+  memoria). Tests de paginación/aislamiento/errores y SQL validado contra
+  ClickHouse real.
 - **`examples/`** — Agente de ejemplo end-to-end.
 
 ## Estructura objetivo del monorepo
@@ -38,6 +43,7 @@ agentlens/
 ├── compliance-engine/ # ⬜ Mapeo regulatorio (Python) (E5)
 ├── reporter/        # ⬜ Informes firmados (E5-T05)
 ├── forensics/       # ⬜ Reconstrucción de ejecuciones (E6)
+├── api/             # ✅ API hot path de lectura de trazas (Go) (E3-T01)
 ├── frontend/        # ⬜ Dashboard Next.js (E3-T03)
 ├── policies/        # ⬜ Bundles Rego (E4)
 └── deploy/          # ✅ docker-compose + esquema ClickHouse (E2-T07); ◻️ Helm (E0-T06)
@@ -49,12 +55,12 @@ Lo cubierto hasta ahora: E1-T01..T09 (SDK core + redacción + payloads +
 enriquecimiento + base de auto-instrumentación + **capa adaptadora de
 convenciones**), E0-T03 (gate de latencia), E0-T04 (entorno local), E2-T01
 (Collector base), **E2-T05/T06 (Ingestion Gateway en Go: auth + rate limiting
-por plan)** y **E2-T07 (esquema ClickHouse explícito + resumen de trazas)**.
+por plan)**, **E2-T07 (esquema ClickHouse explícito + resumen de trazas)** y
+**E3-T01 (API hot path de lectura de trazas)**.
 
-Siguiente paso recomendado del backlog: **E3-T01** (API hot path de lectura de
-trazas sobre ClickHouse), ya desbloqueado por el esquema, y **E3-T02/T03** para
-el dashboard. En paralelo, **E1-T10/T11** (más frameworks + SDK Node) se apoyan
-en la capa de convenciones.
+Siguiente paso recomendado del backlog: **E3-T02** (API REST/GraphQL + auth por
+tenant) y **E3-T03** (dashboard Next.js: lista y detalle de trazas). En paralelo,
+**E1-T10/T11** (más frameworks + SDK Node) se apoyan en la capa de convenciones.
 
 ## Arranque rápido
 
