@@ -46,5 +46,16 @@ AGENTLENS_API_URL=http://localhost:8080 AGENTLENS_API_KEY=demo-key npm run dev
 npm run build && npm start
 ```
 
-El build (type-check + lint) se ha verificado, y el render de ambas vistas
-(lista + timeline) se ha comprobado con un navegador real (Chromium/Playwright).
+El build (type-check + lint) se ha verificado, y el render de las vistas se
+comprueba con un navegador real (Chromium/Playwright).
+
+## E2E (Playwright)
+
+```bash
+npm run test:e2e
+```
+
+Cubre: la lista de trazas renderiza filas y navega al detalle; el detalle muestra
+la conversación y el timeline; la vista de coste muestra los agregados. En CI se
+ejecuta en el job `frontend-e2e`. En local, si usas un Chromium preinstalado,
+exporta `PW_CHROMIUM_PATH` con la ruta al binario.
