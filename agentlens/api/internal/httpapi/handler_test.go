@@ -154,6 +154,35 @@ func TestPublicEndpoints_NoAuth(t *testing.T) {
 	}
 }
 
+func TestGetCost_AggregatesByAgentAndModel(t *testing.T) {
+	m := seededStore()
+	m.AddCostRow("acme", store.CostRow{AgentID: "support-bot", Model: "gpt-4o", InputTokens: 1_000_000, OutputTokens: 0})
+	m.AddCostRow("acme", store.CostRow{AgentID: "support-bot", Model: "gpt-4o", InputTokens: 0, OutputTokens: 1_000_000})
+	h := New(m, testKeys())
+
+	rec := do(t, h, "GET", "/v1/cost", "key-acme")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("código %d (%s)", rec.Code, rec.Body.String())
+	}
+	body := decode(t, rec)
+	// 2.5 (in) + 10 (out) = 12.5
+	if total := body["total_cost_usd"].(float64); total < 12.49 || total > 12.51 {
+		t.Fatalf("total_cost_usd = %v, esperado ~12.5", total)
+	}
+	byAgent := body["by_agent"].([]any)
+	if len(byAgent) != 1 || byAgent[0].(map[string]any)["agent_id"] != "support-bot" {
+		t.Fatalf("by_agent incorrecto: %v", byAgent)
+	}
+}
+
+func TestGetCost_RequiresAuth(t *testing.T) {
+	h := New(seededStore(), testKeys())
+	rec := do(t, h, "GET", "/v1/cost", "")
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("sin key debería ser 401, %d", rec.Code)
+	}
+}
+
 func TestOpenAPI_ServesSpec(t *testing.T) {
 	h := New(seededStore(), testKeys())
 	rec := do(t, h, "GET", "/openapi.yaml", "")

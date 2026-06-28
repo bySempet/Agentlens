@@ -1,8 +1,8 @@
 // Capa de datos del dashboard. Si AGENTLENS_API_URL está configurada, consulta
 // la API hot path (E3-T01/T02) con la API key; si no, cae a fixtures para poder
 // desarrollar/demostrar el dashboard sin backend.
-import { fixtureSpans, fixtureTraces } from "./fixtures";
-import type { Span, TraceSummary } from "./types";
+import { fixtureCost, fixtureSpans, fixtureTraces } from "./fixtures";
+import type { CostSummary, Span, TraceSummary } from "./types";
 
 const API_URL = process.env.AGENTLENS_API_URL;
 const API_KEY = process.env.AGENTLENS_API_KEY ?? "";
@@ -44,4 +44,18 @@ export async function getTrace(traceId: string): Promise<Span[]> {
   }
   const body = await res.json();
   return body.spans as Span[];
+}
+
+export async function getCost(): Promise<CostSummary> {
+  if (!API_URL) {
+    return fixtureCost;
+  }
+  const res = await fetch(`${API_URL}/v1/cost`, {
+    headers: authHeaders(),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw new Error(`API /v1/cost -> ${res.status}`);
+  }
+  return (await res.json()) as CostSummary;
 }

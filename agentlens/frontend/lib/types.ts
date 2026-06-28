@@ -32,3 +32,25 @@ export interface Span {
   tool_arguments?: string;
   tool_result?: string;
 }
+
+export interface AgentCost {
+  agent_id: string;
+  input_tokens: number;
+  output_tokens: number;
+  cost_usd: number;
+}
+
+export interface ModelCost {
+  model: string;
+  input_tokens: number;
+  output_tokens: number;
+  cost_usd: number;
+}
+
+export interface CostSummary {
+  by_agent: AgentCost[];
+  by_model: ModelCost[];
+  total_input_tokens: number;
+  total_output_tokens: number;
+  total_cost_usd: number;
+}

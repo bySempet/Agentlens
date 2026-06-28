@@ -60,6 +60,16 @@ paths:
                     items: { $ref: "#/components/schemas/Span" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
+  /v1/cost:
+    get:
+      summary: Coste de tokens agregado por agente y por modelo
+      responses:
+        "200":
+          description: Resumen de coste del tenant
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CostSummary" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
   /healthz:
     get:
       summary: Liveness
@@ -104,6 +114,35 @@ components:
         duration_ms: { type: number }
         status_code: { type: string }
         status_message: { type: string }
+        system_instructions: { type: string }
+        input_messages: { type: string }
+        output_messages: { type: string }
+        tool_arguments: { type: string }
+        tool_result: { type: string }
+    CostSummary:
+      type: object
+      properties:
+        by_agent:
+          type: array
+          items:
+            type: object
+            properties:
+              agent_id: { type: string }
+              input_tokens: { type: integer }
+              output_tokens: { type: integer }
+              cost_usd: { type: number }
+        by_model:
+          type: array
+          items:
+            type: object
+            properties:
+              model: { type: string }
+              input_tokens: { type: integer }
+              output_tokens: { type: integer }
+              cost_usd: { type: number }
+        total_input_tokens: { type: integer }
+        total_output_tokens: { type: integer }
+        total_cost_usd: { type: number }
     Error:
       type: object
       properties:

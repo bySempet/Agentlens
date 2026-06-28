@@ -38,6 +38,17 @@ a { color: inherit; text-decoration: none; }
   font-size: 12px; color: var(--muted);
   border: 1px solid var(--border); border-radius: 999px; padding: 2px 10px;
 }
+.header .nav { display: flex; gap: 16px; margin-left: 8px; }
+.header .nav a { color: var(--muted); font-size: 13px; }
+.header .nav a:hover { color: var(--text); }
+
+.kpis { display: flex; gap: 16px; margin-bottom: 20px; }
+.kpi { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; }
+.kpi .k { color: var(--muted); font-size: 12px; }
+.kpi .v { font-size: 22px; font-weight: 700; }
+.kpi .v.cost { color: var(--accent); }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 760px) { .grid2 { grid-template-columns: 1fr; } }
 
 .container { padding: 24px; max-width: 1100px; margin: 0 auto; }
 .h1 { font-size: 18px; font-weight: 600; margin: 0 0 4px; }

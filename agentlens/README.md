@@ -30,16 +30,17 @@ Implementado y verificado:
   materializadas (tenant/agent/tokens), ORDER BY tenant-first, índices de salto
   y vista materializada de resumen de trazas para el dashboard. Verificado con
   ClickHouse real (chDB): inserts, aislamiento por tenant y queries sub-ms.
-- **`api/`** — API hot path (Go, E3-T01/T02): lectura de trazas sobre ClickHouse.
-  Endpoints de listado (paginado, desde la vista de resumen) y detalle de traza,
-  con **auth por tenant** (API key Bearer → tenant, no spoofeable) y **esquema
-  OpenAPI** documentado y servido. `TraceStore` desacoplado (ClickHouse + fake en
-  memoria). Tests `-race` de auth/paginación/aislamiento/errores, SQL validado
-  contra ClickHouse real y smoke del binario.
-- **`frontend/`** — Dashboard Next.js (E3-T03/T04): lista de trazas y detalle con
-  **vista de conversación GenAI** (chat-style) y **timeline de spans** (waterfall),
-  consumiendo la API. Capa de datos con fallback a fixtures. Build (type-check) y
-  render de las vistas verificados con Chromium real.
+- **`api/`** — API hot path (Go, E3-T01/T02/T06): lectura de trazas sobre
+  ClickHouse. Endpoints de listado (paginado), detalle de traza y **coste agregado
+  por agente/modelo** (E3-T06), con **auth por tenant** (API key Bearer → tenant,
+  no spoofeable) y **esquema OpenAPI** documentado y servido. `TraceStore`
+  desacoplado (ClickHouse + fake en memoria). Tests `-race` de
+  auth/paginación/aislamiento/coste, SQL validado contra ClickHouse real y smoke
+  del binario.
+- **`frontend/`** — Dashboard Next.js (E3-T03/T04/T06): lista de trazas, detalle
+  con **vista de conversación GenAI** (chat-style) y **timeline de spans**, y
+  **dashboard de coste** por agente/modelo. Capa de datos con fallback a fixtures.
+  Build (type-check) y render de las vistas verificados con Chromium real.
 - **`examples/`** — Agente de ejemplo end-to-end.
 
 ## Estructura objetivo del monorepo
@@ -53,8 +54,8 @@ agentlens/
 ├── compliance-engine/ # ⬜ Mapeo regulatorio (Python) (E5)
 ├── reporter/        # ⬜ Informes firmados (E5-T05)
 ├── forensics/       # ⬜ Reconstrucción de ejecuciones (E6)
-├── api/             # ✅ API de lectura de trazas (Go) (E3-T01/T02: auth+OpenAPI)
-├── frontend/        # ✅ Dashboard Next.js (E3-T03/T04): conversación + timeline
+├── api/             # ✅ API de trazas + coste (Go) (E3-T01/T02/T06)
+├── frontend/        # ✅ Dashboard Next.js (E3-T03/T04/T06): trazas + conversación + coste
 ├── policies/        # ⬜ Bundles Rego (E4)
 └── deploy/          # ✅ docker-compose + esquema ClickHouse (E2-T07); ◻️ Helm (E0-T06)
 ```
@@ -67,8 +68,8 @@ E0-T03 (gate de latencia), base de E0-T02 (CI), E0-T04 (entorno local), E2-T01
 (Collector base), **E2-T05/T06 (Ingestion Gateway
 en Go: auth + rate limiting por plan)**, **E2-T07 (esquema ClickHouse explícito +
 resumen de trazas)**, **E3-T01/T02 (API de lectura de trazas: paginación + auth
-por tenant + OpenAPI)** y **E3-T03/T04 (dashboard Next.js: lista, timeline y
-vista de conversación GenAI)**.
+por tenant + OpenAPI)**, **E3-T06 (coste por agente/modelo)** y **E3-T03/T04
+(dashboard Next.js: lista, timeline, conversación GenAI y coste)**.
 
 Con esto, el camino visible del MVP (SDK → ingesta → almacenamiento → API →
 dashboard) está completo de extremo a extremo, y ambos SDKs (Python + Node) están
@@ -78,7 +79,7 @@ tutorial de integración en 5 pasos (`docs/integration.md`) y workflows de CI y
 release (PyPI Trusted Publishing + npm) en `.github/workflows/`.
 
 Siguiente paso recomendado: **E2-T08/E3-T07** (PostgreSQL + inventario de
-agentes), **E3-T05** (live feed por WebSocket) o **E3-T06** (dashboard de coste).
+agentes), **E3-T05** (live feed por WebSocket) o saltar a **E4** (policy engine).
 La publicación efectiva a PyPI/npm requiere etiquetar un release y configurar los
 secretos/Trusted Publishing del repositorio.
 

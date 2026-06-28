@@ -48,6 +48,18 @@ SELECT
 FROM agentlens.otel_traces
 WHERE TenantId = ? AND TraceId = ?
 ORDER BY Timestamp`
+
+	costRowsSQL = `
+SELECT
+    AgentId,
+    RequestModel,
+    sum(InputTokens)  AS input_tokens,
+    sum(OutputTokens) AS output_tokens
+FROM agentlens.otel_traces
+WHERE TenantId = ?
+GROUP BY AgentId, RequestModel
+HAVING input_tokens > 0 OR output_tokens > 0
+ORDER BY input_tokens + output_tokens DESC`
 )
 
 // ClickHouseStore implementa TraceStore sobre ClickHouse.
@@ -111,6 +123,25 @@ func (s *ClickHouseStore) GetTrace(ctx context.Context, tenantID, traceID string
 			return nil, err
 		}
 		out = append(out, sp)
+	}
+	return out, rows.Err()
+}
+
+// CostRows agrega tokens por agente y modelo.
+func (s *ClickHouseStore) CostRows(ctx context.Context, tenantID string) ([]CostRow, error) {
+	rows, err := s.conn.Query(ctx, costRowsSQL, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	out := []CostRow{}
+	for rows.Next() {
+		var r CostRow
+		if err := rows.Scan(&r.AgentID, &r.Model, &r.InputTokens, &r.OutputTokens); err != nil {
+			return nil, err
+		}
+		out = append(out, r)
 	}
 	return out, rows.Err()
 }

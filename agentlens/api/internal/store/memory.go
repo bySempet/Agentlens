@@ -10,6 +10,7 @@ type MemoryStore struct {
 	// summaries[tenant] -> trazas; spans[tenant][traceID] -> spans
 	summaries map[string][]TraceSummary
 	spans     map[string]map[string][]Span
+	costs     map[string][]CostRow
 }
 
 // NewMemoryStore crea un store vacío.
@@ -50,4 +51,17 @@ func (m *MemoryStore) GetTrace(_ context.Context, tenantID, traceID string) ([]S
 		return byTrace[traceID], nil
 	}
 	return nil, nil
+}
+
+// costRows permite a los tests inyectar agregados de coste directamente.
+func (m *MemoryStore) AddCostRow(tenantID string, row CostRow) {
+	if m.costs == nil {
+		m.costs = map[string][]CostRow{}
+	}
+	m.costs[tenantID] = append(m.costs[tenantID], row)
+}
+
+// CostRows devuelve los agregados de coste del tenant.
+func (m *MemoryStore) CostRows(_ context.Context, tenantID string) ([]CostRow, error) {
+	return m.costs[tenantID], nil
 }

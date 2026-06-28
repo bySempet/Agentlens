@@ -51,6 +51,14 @@ type Page struct {
 	Offset int
 }
 
+// CostRow agrega tokens por (agente, modelo) para el cálculo de coste (E3-T06).
+type CostRow struct {
+	AgentID      string `json:"agent_id"`
+	Model        string `json:"model"`
+	InputTokens  uint64 `json:"input_tokens"`
+	OutputTokens uint64 `json:"output_tokens"`
+}
+
 // TraceStore es el contrato de lectura sobre el almacén de trazas.
 type TraceStore interface {
 	// ListTraces devuelve el resumen de las trazas de un tenant, paginado y
@@ -59,4 +67,6 @@ type TraceStore interface {
 	// GetTrace devuelve los spans de una traza concreta de un tenant, ordenados
 	// por tiempo. Lista vacía si la traza no existe para ese tenant.
 	GetTrace(ctx context.Context, tenantID, traceID string) ([]Span, error)
+	// CostRows agrega el uso de tokens por agente y modelo de un tenant.
+	CostRows(ctx context.Context, tenantID string) ([]CostRow, error)
 }

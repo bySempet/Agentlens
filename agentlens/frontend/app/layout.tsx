@@ -15,7 +15,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <Link href="/" className="logo">
             Agent<span>Lens</span>
           </Link>
-          <span className="tag">Trazas de agentes</span>
+          <nav className="nav">
+            <Link href="/">Trazas</Link>
+            <Link href="/cost">Coste</Link>
+          </nav>
         </header>
         {children}
       </body>

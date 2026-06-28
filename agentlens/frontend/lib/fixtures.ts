@@ -1,6 +1,6 @@
 // Datos de ejemplo para desarrollo/demo y para renderizar el dashboard sin un
 // backend en marcha. Se usan cuando AGENTLENS_API_URL no está configurada.
-import type { Span, TraceSummary } from "./types";
+import type { CostSummary, Span, TraceSummary } from "./types";
 
 export const fixtureTraces: TraceSummary[] = [
   {
@@ -40,6 +40,20 @@ export const fixtureTraces: TraceSummary[] = [
     output_tokens: 320,
   },
 ];
+
+export const fixtureCost: CostSummary = {
+  by_agent: [
+    { agent_id: "biller", input_tokens: 900_000, output_tokens: 320_000, cost_usd: 7.05 },
+    { agent_id: "support-bot", input_tokens: 120_000, output_tokens: 40_000, cost_usd: 0.7 },
+  ],
+  by_model: [
+    { model: "claude-sonnet-4-6", input_tokens: 900_000, output_tokens: 320_000, cost_usd: 7.5 },
+    { model: "gpt-4o", input_tokens: 120_000, output_tokens: 40_000, cost_usd: 0.7 },
+  ],
+  total_input_tokens: 1_020_000,
+  total_output_tokens: 360_000,
+  total_cost_usd: 8.2,
+};
 
 export const fixtureSpans: Record<string, Span[]> = {
   "9f2c1a7b3e": [

@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"github.com/bysempet/agentlens/api/internal/auth"
+	"github.com/bysempet/agentlens/api/internal/cost"
 	"github.com/bysempet/agentlens/api/internal/store"
 	"github.com/bysempet/agentlens/api/spec"
 )
@@ -24,6 +25,7 @@ func New(s store.TraceStore, keys auth.KeyStore) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /v1/traces", h.listTraces)
 	mux.HandleFunc("GET /v1/traces/{traceId}", h.getTrace)
+	mux.HandleFunc("GET /v1/cost", h.getCost)
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
@@ -83,6 +85,20 @@ func (h *handler) getTrace(w http.ResponseWriter, r *http.Request) {
 		"trace_id": traceID,
 		"spans":    spans,
 	})
+}
+
+func (h *handler) getCost(w http.ResponseWriter, r *http.Request) {
+	tenant, ok := auth.TenantFromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "no autenticado")
+		return
+	}
+	rows, err := h.store.CostRows(r.Context(), tenant)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "error consultando el coste")
+		return
+	}
+	writeJSON(w, http.StatusOK, cost.Summarize(rows))
 }
 
 // parsePage valida limit/offset con defaults y tope máximo.

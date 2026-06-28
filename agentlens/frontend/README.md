@@ -8,6 +8,8 @@ la API hot path (E3-T01/T02).
 
 - **`/`** — lista de trazas (root span, agente, servicio, inicio, duración,
   spans, tokens, estado). Cada fila navega al detalle.
+- **`/cost`** — dashboard de coste (E3-T06): coste estimado de tokens (tarifa por
+  modelo) agregado por agente y por modelo, con KPIs de coste/tokens totales.
 - **`/traces/{traceId}`** — detalle paso a paso:
   - **Conversación (E3-T04)**: render chat-style de los atributos `gen_ai.*`
     (system / user / assistant / tool calls), tolerante a contenido vacío,
