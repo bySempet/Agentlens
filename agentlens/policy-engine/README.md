@@ -1,4 +1,4 @@
-# Policy Engine (Go + OPA/Rego) — E4-T01
+# Policy Engine (Go + OPA/Rego) — E4-T01 / E4-T02
 
 Motor de decisiones de gobernanza para acciones de agentes. Evalúa políticas
 **Rego** (OpenAGent Policy Agent, OPA) compiladas una sola vez y evaluadas por
@@ -36,6 +36,16 @@ echo '{"tool":"shell.exec"}' | go run ./cmd/policyeval
 # {"allow": false, "denials": ["herramienta bloqueada: shell.exec"]}  (exit 3)
 ```
 
+## Bundle WASM (E4-T02)
+
+La política se compila a un bundle OPA con WebAssembly (`policy.wasm`), listo para
+enforcement en el borde (E4-T03). Se genera en CI:
+
+```bash
+go run ./cmd/buildbundle -out build/bundle.tar.gz
+# build/bundle.tar.gz contiene policy.wasm (+ data.json, .manifest)
+```
+
 ## Tests
 
 ```bash
@@ -49,6 +59,5 @@ tras compilar).
 
 ## Siguiente
 
-- **E4-T02**: compilar la política a bundle WASM en CI.
 - **E4-T03**: enforcement síncrono en el borde (SDK/gateway evalúa el WASM local).
 - **E4-T04**: sincronización de políticas control-plane → borde.

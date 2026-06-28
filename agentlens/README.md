@@ -42,10 +42,11 @@ Implementado y verificado:
   (chat-style) y **timeline de spans**, y **dashboard de coste** por agente/modelo.
   Capa de datos con fallback a fixtures. Build (type-check) y render de las vistas
   (incluido el live feed) verificados con Chromium real.
-- **`policy-engine/`** — Policy Engine (Go + OPA/Rego, E4-T01): evalúa decisiones
+- **`policy-engine/`** — Policy Engine (Go + OPA/Rego, E4-T01/T02): evalúa decisiones
   de gobernanza sobre acciones de agentes (herramientas bloqueadas, PII→externo,
   límite de tokens), data-driven y compilado una vez. **Latencia ~60 µs** por
-  evaluación (criterio < 5 ms). Librería + CLI `policyeval`; 8 tests.
+  evaluación (criterio < 5 ms). Compila la política a **bundle WASM** (E4-T02) para
+  enforcement en el borde. Librería + CLIs `policyeval`/`buildbundle`; 9 tests.
 - **`examples/`** — Agente de ejemplo end-to-end.
 
 ## Estructura objetivo del monorepo
@@ -61,8 +62,8 @@ agentlens/
 ├── forensics/       # ⬜ Reconstrucción de ejecuciones (E6)
 ├── api/             # ✅ API trazas/coste/live feed (Go) (E3-T01/T02/T05/T06)
 ├── frontend/        # ✅ Dashboard Next.js (E3-T03/T04/T05/T06): + live feed
-├── policy-engine/   # ✅ Motor de políticas OPA/Rego (Go) (E4-T01)
-├── policies/        # ◻️ política base en policy-engine/; bundles WASM (E4-T02)
+├── policy-engine/   # ✅ Motor OPA/Rego + bundle WASM (Go) (E4-T01/T02)
+├── policies/        # ◻️ política base + bundle WASM en policy-engine/ (E4-T02)
 └── deploy/          # ✅ docker-compose + esquema ClickHouse (E2-T07); ◻️ Helm (E0-T06)
 ```
 
@@ -85,11 +86,11 @@ dashboard) está completo de extremo a extremo, y ambos SDKs (Python + Node) est
 tutorial de integración en 5 pasos (`docs/integration.md`) y workflows de CI y
 release (PyPI Trusted Publishing + npm) en `.github/workflows/`.
 
-Con esto, **toda la E3 (dashboard de trazas) está completa** y arranca **E4
-(Policy Engine) con E4-T01** (evaluación OPA/Rego < 5 ms). Siguiente paso
-recomendado: **E4-T02/T03** (bundle WASM + enforcement en el borde) y **E2-T08/
-E3-T07** (PostgreSQL + inventario de agentes; el plano de control). La publicación
-efectiva a PyPI/npm requiere etiquetar un release y configurar los
+Con esto, **toda la E3 (dashboard de trazas) está completa** y avanza **E4
+(Policy Engine): E4-T01** (evaluación OPA/Rego < 5 ms) y **E4-T02** (bundle WASM).
+Siguiente paso recomendado: **E4-T03** (enforcement en el borde con el WASM) y
+**E2-T08/E3-T07** (PostgreSQL + inventario de agentes; el plano de control). La
+publicación efectiva a PyPI/npm requiere etiquetar un release y configurar los
 secretos/Trusted Publishing del repositorio.
 
 ## Arranque rápido

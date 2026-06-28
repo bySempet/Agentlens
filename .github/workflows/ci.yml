@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        module: [ingestion, api]
+        module: [ingestion, api, policy-engine]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -35,6 +35,21 @@ jobs:
           go build ./...
           go vet ./...
           go test -race ./...
+
+  policy-bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+      - name: Build WASM policy bundle (E4-T02)
+        working-directory: agentlens/policy-engine
+        run: go run ./cmd/buildbundle -out build/bundle.tar.gz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: policy-bundle
+          path: agentlens/policy-engine/build/bundle.tar.gz
 
   node-sdk:
     runs-on: ubuntu-latest
