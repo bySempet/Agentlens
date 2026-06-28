@@ -30,17 +30,18 @@ Implementado y verificado:
   materializadas (tenant/agent/tokens), ORDER BY tenant-first, índices de salto
   y vista materializada de resumen de trazas para el dashboard. Verificado con
   ClickHouse real (chDB): inserts, aislamiento por tenant y queries sub-ms.
-- **`api/`** — API hot path (Go, E3-T01/T02/T06): lectura de trazas sobre
-  ClickHouse. Endpoints de listado (paginado), detalle de traza y **coste agregado
-  por agente/modelo** (E3-T06), con **auth por tenant** (API key Bearer → tenant,
-  no spoofeable) y **esquema OpenAPI** documentado y servido. `TraceStore`
-  desacoplado (ClickHouse + fake en memoria). Tests `-race` de
-  auth/paginación/aislamiento/coste, SQL validado contra ClickHouse real y smoke
-  del binario.
-- **`frontend/`** — Dashboard Next.js (E3-T03/T04/T06): lista de trazas, detalle
-  con **vista de conversación GenAI** (chat-style) y **timeline de spans**, y
-  **dashboard de coste** por agente/modelo. Capa de datos con fallback a fixtures.
-  Build (type-check) y render de las vistas verificados con Chromium real.
+- **`api/`** — API hot path (Go, E3-T01/T02/T05/T06): lectura de trazas sobre
+  ClickHouse. Endpoints de listado (paginado), detalle de traza, **coste agregado
+  por agente/modelo** (E3-T06) y **live feed por WebSocket** (E3-T05), con **auth
+  por tenant** (API key Bearer/query → tenant, no spoofeable) y **esquema OpenAPI**
+  documentado y servido. `TraceStore` desacoplado (ClickHouse + fake en memoria).
+  Tests `-race` (auth, paginación, aislamiento, coste, WS), SQL validado contra
+  ClickHouse real y smoke del binario.
+- **`frontend/`** — Dashboard Next.js (E3-T03/T04/T05/T06): lista de trazas con
+  **live feed** en tiempo real, detalle con **vista de conversación GenAI**
+  (chat-style) y **timeline de spans**, y **dashboard de coste** por agente/modelo.
+  Capa de datos con fallback a fixtures. Build (type-check) y render de las vistas
+  (incluido el live feed) verificados con Chromium real.
 - **`examples/`** — Agente de ejemplo end-to-end.
 
 ## Estructura objetivo del monorepo
@@ -54,8 +55,8 @@ agentlens/
 ├── compliance-engine/ # ⬜ Mapeo regulatorio (Python) (E5)
 ├── reporter/        # ⬜ Informes firmados (E5-T05)
 ├── forensics/       # ⬜ Reconstrucción de ejecuciones (E6)
-├── api/             # ✅ API de trazas + coste (Go) (E3-T01/T02/T06)
-├── frontend/        # ✅ Dashboard Next.js (E3-T03/T04/T06): trazas + conversación + coste
+├── api/             # ✅ API trazas/coste/live feed (Go) (E3-T01/T02/T05/T06)
+├── frontend/        # ✅ Dashboard Next.js (E3-T03/T04/T05/T06): + live feed
 ├── policies/        # ⬜ Bundles Rego (E4)
 └── deploy/          # ✅ docker-compose + esquema ClickHouse (E2-T07); ◻️ Helm (E0-T06)
 ```
@@ -68,8 +69,9 @@ E0-T03 (gate de latencia), base de E0-T02 (CI), E0-T04 (entorno local), E2-T01
 (Collector base), **E2-T05/T06 (Ingestion Gateway
 en Go: auth + rate limiting por plan)**, **E2-T07 (esquema ClickHouse explícito +
 resumen de trazas)**, **E3-T01/T02 (API de lectura de trazas: paginación + auth
-por tenant + OpenAPI)**, **E3-T06 (coste por agente/modelo)** y **E3-T03/T04
-(dashboard Next.js: lista, timeline, conversación GenAI y coste)**.
+por tenant + OpenAPI)**, **E3-T05 (live feed WebSocket)**, **E3-T06 (coste por
+agente/modelo)** y **E3-T03/T04 (dashboard Next.js: lista, timeline, conversación
+GenAI, coste y live feed)**.
 
 Con esto, el camino visible del MVP (SDK → ingesta → almacenamiento → API →
 dashboard) está completo de extremo a extremo, y ambos SDKs (Python + Node) están
@@ -78,9 +80,10 @@ dashboard) está completo de extremo a extremo, y ambos SDKs (Python + Node) est
 tutorial de integración en 5 pasos (`docs/integration.md`) y workflows de CI y
 release (PyPI Trusted Publishing + npm) en `.github/workflows/`.
 
-Siguiente paso recomendado: **E2-T08/E3-T07** (PostgreSQL + inventario de
-agentes), **E3-T05** (live feed por WebSocket) o saltar a **E4** (policy engine).
-La publicación efectiva a PyPI/npm requiere etiquetar un release y configurar los
+Con esto, **toda la E3 (dashboard de trazas) está completa**. Siguiente paso
+recomendado: **E2-T08/E3-T07** (PostgreSQL + inventario de agentes; el plano de
+control) o saltar a **E4** (policy engine, el diferenciador de gobernanza). La
+publicación efectiva a PyPI/npm requiere etiquetar un release y configurar los
 secretos/Trusted Publishing del repositorio.
 
 ## Arranque rápido

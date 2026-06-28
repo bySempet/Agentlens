@@ -40,15 +40,20 @@ func TenantFromContext(ctx context.Context) (string, bool) {
 	return t, ok
 }
 
-// apiKeyFromRequest extrae la key de "Authorization: Bearer <key>" o, en su
-// defecto, de la cabecera X-AgentLens-Key.
+// apiKeyFromRequest extrae la key de "Authorization: Bearer <key>", de la
+// cabecera X-AgentLens-Key o, como último recurso, del query param `api_key`.
+// El query param existe porque los WebSocket del navegador no pueden fijar
+// cabeceras; úsalo solo sobre TLS (la key puede acabar en logs/URLs).
 func apiKeyFromRequest(r *http.Request) string {
 	if h := r.Header.Get("Authorization"); h != "" {
 		if after, ok := strings.CutPrefix(h, "Bearer "); ok {
 			return strings.TrimSpace(after)
 		}
 	}
-	return strings.TrimSpace(r.Header.Get("X-AgentLens-Key"))
+	if k := strings.TrimSpace(r.Header.Get("X-AgentLens-Key")); k != "" {
+		return k
+	}
+	return strings.TrimSpace(r.URL.Query().Get("api_key"))
 }
 
 // Middleware autentica las peticiones y deja el tenant en el contexto. Las rutas

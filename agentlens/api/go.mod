@@ -4,7 +4,10 @@ go 1.24.1
 
 toolchain go1.24.7
 
-require github.com/ClickHouse/clickhouse-go/v2 v2.46.0
+require (
+	github.com/ClickHouse/clickhouse-go/v2 v2.46.0
+	github.com/coder/websocket v1.8.15
+)
 
 require (
 	github.com/ClickHouse/ch-go v0.71.0 // indirect

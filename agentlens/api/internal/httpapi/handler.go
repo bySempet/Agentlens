@@ -6,6 +6,10 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"time"
+
+	"github.com/coder/websocket"
+	"github.com/coder/websocket/wsjson"
 
 	"github.com/bysempet/agentlens/api/internal/auth"
 	"github.com/bysempet/agentlens/api/internal/cost"
@@ -14,18 +18,31 @@ import (
 )
 
 const (
-	defaultLimit = 50
-	maxLimit     = 200
+	defaultLimit          = 50
+	maxLimit              = 200
+	defaultStreamInterval = time.Second
 )
+
+// Option configura el handler.
+type Option func(*handler)
+
+// WithStreamInterval ajusta el periodo de sondeo del live feed (E3-T05).
+func WithStreamInterval(d time.Duration) Option {
+	return func(h *handler) { h.streamInterval = d }
+}
 
 // New construye el handler HTTP: registra las rutas y las envuelve con la
 // autenticación por API key. /healthz y /openapi.yaml son públicas.
-func New(s store.TraceStore, keys auth.KeyStore) http.Handler {
-	h := &handler{store: s}
+func New(s store.TraceStore, keys auth.KeyStore, opts ...Option) http.Handler {
+	h := &handler{store: s, streamInterval: defaultStreamInterval}
+	for _, opt := range opts {
+		opt(h)
+	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /v1/traces", h.listTraces)
 	mux.HandleFunc("GET /v1/traces/{traceId}", h.getTrace)
 	mux.HandleFunc("GET /v1/cost", h.getCost)
+	mux.HandleFunc("GET /v1/stream", h.stream)
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
@@ -38,7 +55,8 @@ func New(s store.TraceStore, keys auth.KeyStore) http.Handler {
 
 // handler agrupa los manejadores sobre un TraceStore.
 type handler struct {
-	store store.TraceStore
+	store          store.TraceStore
+	streamInterval time.Duration
 }
 
 func (h *handler) listTraces(w http.ResponseWriter, r *http.Request) {
@@ -99,6 +117,47 @@ func (h *handler) getCost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, cost.Summarize(rows))
+}
+
+// stream emite por WebSocket las trazas nuevas del tenant en tiempo real
+// (live feed, E3-T05). Sondea el almacén y empuja cada traza iniciada tras la
+// conexión. Solo trazas del tenant autenticado (aislamiento).
+func (h *handler) stream(w http.ResponseWriter, r *http.Request) {
+	tenant, ok := auth.TenantFromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "no autenticado")
+		return
+	}
+	conn, err := websocket.Accept(w, r, nil)
+	if err != nil {
+		return
+	}
+	defer conn.CloseNow()
+
+	ctx := conn.CloseRead(r.Context()) // detecta cierre del cliente
+	since := time.Now()
+	ticker := time.NewTicker(h.streamInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			traces, err := h.store.ListTracesSince(ctx, tenant, since, 100)
+			if err != nil {
+				return
+			}
+			for _, t := range traces {
+				if t.StartTime.After(since) {
+					since = t.StartTime
+				}
+				if err := wsjson.Write(ctx, conn, t); err != nil {
+					return
+				}
+			}
+		}
+	}
 }
 
 // parsePage valida limit/offset con defaults y tope máximo.

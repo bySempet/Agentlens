@@ -67,6 +67,9 @@ type TraceStore interface {
 	// GetTrace devuelve los spans de una traza concreta de un tenant, ordenados
 	// por tiempo. Lista vacía si la traza no existe para ese tenant.
 	GetTrace(ctx context.Context, tenantID, traceID string) ([]Span, error)
+	// ListTracesSince devuelve las trazas de un tenant que comenzaron después de
+	// `since`, en orden ascendente (para el live feed, E3-T05).
+	ListTracesSince(ctx context.Context, tenantID string, since time.Time, limit int) ([]TraceSummary, error)
 	// CostRows agrega el uso de tokens por agente y modelo de un tenant.
 	CostRows(ctx context.Context, tenantID string) ([]CostRow, error)
 }

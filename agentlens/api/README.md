@@ -10,12 +10,15 @@ por tenant y con esquema OpenAPI documentado.
 | --- | --- | --- | --- |
 | `GET` | `/v1/traces?limit=&offset=` | sí | Lista de trazas del tenant (resumen) |
 | `GET` | `/v1/traces/{traceId}` | sí | Detalle: spans de la traza (timeline) |
+| `GET` | `/v1/cost` | sí | Coste agregado por agente y modelo (E3-T06) |
+| `GET` | `/v1/stream` | sí | Live feed de trazas por WebSocket (E3-T05) |
 | `GET` | `/openapi.yaml` | no | Especificación OpenAPI 3.0 (servida embebida) |
 | `GET` | `/healthz` | no | Liveness |
 
 - **Auth por tenant (E3-T02)**: cabecera `Authorization: Bearer <api-key>` (o
-  `X-AgentLens-Key`). El tenant se **deriva de la key**, no de una cabecera
-  spoofeable, así que cada cliente solo ve sus trazas. Sin key o inválida → `401`.
+  `X-AgentLens-Key`, o `?api_key=` para WebSocket desde navegador). El tenant se
+  **deriva de la key**, no de una cabecera spoofeable, así que cada cliente solo
+  ve sus trazas. Sin key o inválida → `401`.
 - Paginación: `limit` por defecto 50, máximo 200; `offset` por defecto 0.
   Parámetros inválidos → `400`. Traza inexistente → `404`.
 - La lista sale de la vista materializada `agentlens.trace_summary` (un resumen

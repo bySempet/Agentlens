@@ -42,6 +42,16 @@ func TestMiddleware_XAgentLensKeyHeaderAlsoWorks(t *testing.T) {
 	}
 }
 
+func TestMiddleware_QueryParamKeyWorks(t *testing.T) {
+	h := Middleware(http.HandlerFunc(echoTenant), store())
+	req := httptest.NewRequest("GET", "/v1/stream?api_key=key-acme", nil)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	if rec.Body.String() != "acme" {
+		t.Fatalf("api_key por query debería resolver el tenant, body=%q", rec.Body.String())
+	}
+}
+
 func TestMiddleware_MissingKeyIs401(t *testing.T) {
 	h := Middleware(http.HandlerFunc(echoTenant), store())
 	rec := httptest.NewRecorder()

@@ -7,7 +7,8 @@ la API hot path (E3-T01/T02).
 ## Vistas
 
 - **`/`** — lista de trazas (root span, agente, servicio, inicio, duración,
-  spans, tokens, estado). Cada fila navega al detalle.
+  spans, tokens, estado). Cada fila navega al detalle. Incluye un **live feed**
+  (E3-T05) que muestra las trazas nuevas en tiempo real vía WebSocket.
 - **`/cost`** — dashboard de coste (E3-T06): coste estimado de tokens (tarifa por
   modelo) agregado por agente y por modelo, con KPIs de coste/tokens totales.
 - **`/traces/{traceId}`** — detalle paso a paso:
@@ -26,6 +27,8 @@ poder desarrollar y demostrar el dashboard sin backend.
 | --- | --- |
 | `AGENTLENS_API_URL` | Base de la API de trazas (p.ej. `http://localhost:8080`). Sin ella, fixtures. |
 | `AGENTLENS_API_KEY` | API key del tenant (cabecera `Authorization: Bearer`). |
+| `NEXT_PUBLIC_AGENTLENS_WS_URL` | URL del WebSocket del live feed (p.ej. `ws://localhost:8080/v1/stream`). |
+| `NEXT_PUBLIC_AGENTLENS_API_KEY` | API key para el live feed (se pasa como `?api_key=`). |
 
 ## Desarrollo
 

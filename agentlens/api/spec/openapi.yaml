@@ -70,6 +70,16 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/CostSummary" }
         "401": { $ref: "#/components/responses/Unauthorized" }
+  /v1/stream:
+    get:
+      summary: Live feed de trazas (WebSocket)
+      description: >
+        Upgrade a WebSocket. Emite cada nueva traza del tenant (objeto
+        TraceSummary por mensaje, JSON) a medida que llega. Auth por
+        `Authorization: Bearer` o, para navegadores, query param `?api_key=`.
+      responses:
+        "101": { description: Switching Protocols (WebSocket) }
+        "401": { $ref: "#/components/responses/Unauthorized" }
   /healthz:
     get:
       summary: Liveness

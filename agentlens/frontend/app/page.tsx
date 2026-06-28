@@ -1,5 +1,6 @@
 import { getTraces, usingFixtures } from "@/lib/api";
 import TraceRow from "./TraceRow";
+import LiveFeed from "./LiveFeed";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +11,7 @@ export default async function TracesPage() {
     <main className="container">
       <h1 className="h1">Trazas</h1>
       <p className="sub">Actividad reciente de agentes, por traza.</p>
+      <LiveFeed />
       {usingFixtures && (
         <div className="banner">
           Mostrando datos de ejemplo. Configura <span className="mono">AGENTLENS_API_URL</span>{" "}

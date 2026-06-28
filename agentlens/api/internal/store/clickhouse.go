@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
@@ -48,6 +49,25 @@ SELECT
 FROM agentlens.otel_traces
 WHERE TenantId = ? AND TraceId = ?
 ORDER BY Timestamp`
+
+	listSinceSQL = `
+SELECT
+    TraceId,
+    argMinMerge(RootSpanName)                       AS root_span_name,
+    anyMerge(ServiceName)                           AS service_name,
+    anyMerge(AgentId)                               AS agent_id,
+    fromUnixTimestamp64Nano(minMerge(StartNs))      AS start_time,
+    (maxMerge(EndNs) - minMerge(StartNs)) / 1e6     AS duration_ms,
+    countMerge(SpanCount)                           AS span_count,
+    sumMerge(ErrorCount)                            AS error_count,
+    sumMerge(InputTokens)                           AS input_tokens,
+    sumMerge(OutputTokens)                          AS output_tokens
+FROM agentlens.trace_summary
+WHERE TenantId = ?
+GROUP BY TraceId
+HAVING minMerge(StartNs) > ?
+ORDER BY minMerge(StartNs) ASC
+LIMIT ?`
 
 	costRowsSQL = `
 SELECT
@@ -123,6 +143,29 @@ func (s *ClickHouseStore) GetTrace(ctx context.Context, tenantID, traceID string
 			return nil, err
 		}
 		out = append(out, sp)
+	}
+	return out, rows.Err()
+}
+
+// ListTracesSince devuelve las trazas iniciadas tras `since` (orden ascendente).
+func (s *ClickHouseStore) ListTracesSince(ctx context.Context, tenantID string, since time.Time, limit int) ([]TraceSummary, error) {
+	rows, err := s.conn.Query(ctx, listSinceSQL, tenantID, since.UnixNano(), limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	out := []TraceSummary{}
+	for rows.Next() {
+		var t TraceSummary
+		if err := rows.Scan(
+			&t.TraceID, &t.RootSpanName, &t.ServiceName, &t.AgentID,
+			&t.StartTime, &t.DurationMs, &t.SpanCount, &t.ErrorCount,
+			&t.InputTokens, &t.OutputTokens,
+		); err != nil {
+			return nil, err
+		}
+		out = append(out, t)
 	}
 	return out, rows.Err()
 }
