@@ -16,6 +16,8 @@ func (h *handler) createAgent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var in agents.CreateInput
+	// Límite de tamaño del cuerpo (defensa): el registro de un agente es pequeño.
+	r.Body = http.MaxBytesReader(w, r.Body, 64<<10)
 	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
 		writeError(w, http.StatusBadRequest, "JSON inválido")
 		return

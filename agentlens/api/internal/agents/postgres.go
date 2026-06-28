@@ -6,8 +6,15 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+// uniqueViolation indica un conflicto de clave única (código SQLSTATE 23505).
+func uniqueViolation(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == "23505"
+}
 
 // ErrTenantNotFound se devuelve si el slug de tenant no existe como organización.
 var ErrTenantNotFound = errors.New("tenant no encontrado")
@@ -51,14 +58,25 @@ func (s *PostgresStore) Create(ctx context.Context, tenant string, in CreateInpu
 	if env == "" {
 		env = "production"
 	}
-	a := Agent{AgentID: GenerateAgentID(in.Name), Name: in.Name, Framework: in.Framework, Environment: env}
-	err = s.pool.QueryRow(ctx,
-		`INSERT INTO agents (org_id, agent_id, name, framework, environment)
-		 VALUES ($1, $2, $3, $4, $5)
-		 RETURNING status, created_at`,
-		org, a.AgentID, a.Name, a.Framework, a.Environment,
-	).Scan(&a.Status, &a.CreatedAt)
-	return a, err
+	a := Agent{Name: in.Name, Framework: in.Framework, Environment: env}
+	// Reintenta si el agent_id generado colisiona (UNIQUE org_id, agent_id).
+	var lastErr error
+	for attempt := 0; attempt < 3; attempt++ {
+		a.AgentID = GenerateAgentID(in.Name)
+		lastErr = s.pool.QueryRow(ctx,
+			`INSERT INTO agents (org_id, agent_id, name, framework, environment)
+			 VALUES ($1, $2, $3, $4, $5)
+			 RETURNING status, created_at`,
+			org, a.AgentID, a.Name, a.Framework, a.Environment,
+		).Scan(&a.Status, &a.CreatedAt)
+		if lastErr == nil {
+			return a, nil
+		}
+		if !uniqueViolation(lastErr) {
+			return Agent{}, lastErr
+		}
+	}
+	return Agent{}, fmt.Errorf("no se pudo generar un agent_id único: %w", lastErr)
 }
 
 func (s *PostgresStore) List(ctx context.Context, tenant string) ([]Agent, error) {
