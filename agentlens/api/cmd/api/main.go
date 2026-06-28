@@ -15,11 +15,11 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strings"
 
 	"github.com/bysempet/agentlens/api/internal/auth"
 	"github.com/bysempet/agentlens/api/internal/httpapi"
 	"github.com/bysempet/agentlens/api/internal/store"
+	"github.com/bysempet/agentlens/shared/keystore"
 )
 
 func getenv(key, def string) string {
@@ -29,26 +29,12 @@ func getenv(key, def string) string {
 	return def
 }
 
-// parseAPIKeys interpreta "key1:tenantA,key2:tenantB" como mapa key -> tenant.
-func parseAPIKeys(raw string) map[string]string {
-	out := map[string]string{}
-	for _, pair := range strings.Split(raw, ",") {
-		pair = strings.TrimSpace(pair)
-		if pair == "" {
-			continue
-		}
-		k, t, ok := strings.Cut(pair, ":")
-		if !ok || k == "" || t == "" {
-			log.Fatalf("par API key inválido (esperado key:tenant): %q", pair)
-		}
-		out[k] = t
-	}
-	return out
-}
-
 func main() {
 	listen := getenv("AGENTLENS_API_LISTEN", ":8080")
-	keys := parseAPIKeys(os.Getenv("AGENTLENS_API_KEYS"))
+	keys, err := keystore.ParseSpec(os.Getenv("AGENTLENS_API_KEYS"))
+	if err != nil {
+		log.Fatal(err)
+	}
 	if len(keys) == 0 {
 		log.Fatal("AGENTLENS_API_KEYS vacío: no hay claves con las que autenticar")
 	}

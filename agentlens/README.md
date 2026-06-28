@@ -55,6 +55,7 @@ Implementado y verificado:
 agentlens/
 ├── sdk-python/      # ✅ Core Tracing SDK (Python)
 ├── sdk-node/        # ✅ SDK TypeScript @agentlens/node (E1-T11)
+├── shared/          # ✅ módulo Go compartido (keystore auth) ingestion+api
 ├── collector/       # ◻️ config base en deploy/; procesadores Go custom (E2-T02)
 ├── ingestion/       # ✅ Ingestion Gateway (Go) (E2-T05/T06); ⬜ stream processors
 ├── compliance-engine/ # ⬜ Mapeo regulatorio (Python) (E5)

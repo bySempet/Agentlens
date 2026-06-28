@@ -7,32 +7,18 @@ import (
 	"context"
 	"net/http"
 	"strings"
+
+	"github.com/bysempet/agentlens/shared/keystore"
 )
 
 type tenantCtxKey struct{}
 
-// KeyStore resuelve una API key a su tenant.
-type KeyStore interface {
-	TenantForKey(apiKey string) (tenantID string, ok bool)
-}
+// KeyStore se comparte con el Ingestion Gateway (módulo shared) para no divergir
+// en la lógica de autenticación por clave.
+type KeyStore = keystore.KeyStore
 
-// StaticKeyStore es un KeyStore en memoria (key -> tenant) para MVP y tests.
-type StaticKeyStore struct{ keys map[string]string }
-
-// NewStaticKeyStore crea el store a partir de un mapa key -> tenantID.
-func NewStaticKeyStore(keys map[string]string) *StaticKeyStore {
-	cp := make(map[string]string, len(keys))
-	for k, v := range keys {
-		cp[k] = v
-	}
-	return &StaticKeyStore{keys: cp}
-}
-
-// TenantForKey implementa KeyStore.
-func (s *StaticKeyStore) TenantForKey(apiKey string) (string, bool) {
-	t, ok := s.keys[apiKey]
-	return t, ok
-}
+// NewStaticKeyStore crea un KeyStore en memoria (key -> tenant).
+var NewStaticKeyStore = keystore.NewStaticKeyStore
 
 // TenantFromContext recupera el tenant inyectado por el middleware.
 func TenantFromContext(ctx context.Context) (string, bool) {

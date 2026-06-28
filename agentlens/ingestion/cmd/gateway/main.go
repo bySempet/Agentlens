@@ -24,6 +24,7 @@ import (
 	"github.com/bysempet/agentlens/ingestion/internal/gateway"
 	"github.com/bysempet/agentlens/ingestion/internal/plan"
 	"github.com/bysempet/agentlens/ingestion/internal/ratelimit"
+	"github.com/bysempet/agentlens/shared/keystore"
 	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -34,23 +35,6 @@ func getenv(key, def string) string {
 		return v
 	}
 	return def
-}
-
-// parseAPIKeys interpreta "key1:tenantA,key2:tenantB" como mapa key -> tenant.
-func parseAPIKeys(raw string) map[string]string {
-	out := map[string]string{}
-	for _, pair := range strings.Split(raw, ",") {
-		pair = strings.TrimSpace(pair)
-		if pair == "" {
-			continue
-		}
-		k, t, ok := strings.Cut(pair, ":")
-		if !ok || k == "" || t == "" {
-			log.Fatalf("par API key inválido (esperado key:tenant): %q", pair)
-		}
-		out[k] = t
-	}
-	return out
 }
 
 // parseTenantPlans interpreta "acme:growth,globex:free" como mapa tenant -> plan.
@@ -79,7 +63,10 @@ func main() {
 	downstream := getenv("AGENTLENS_GATEWAY_DOWNSTREAM", "localhost:5317")
 	certPath := os.Getenv("AGENTLENS_GATEWAY_TLS_CERT")
 	keyPath := os.Getenv("AGENTLENS_GATEWAY_TLS_KEY")
-	keys := parseAPIKeys(os.Getenv("AGENTLENS_GATEWAY_API_KEYS"))
+	keys, err := keystore.ParseSpec(os.Getenv("AGENTLENS_GATEWAY_API_KEYS"))
+	if err != nil {
+		log.Fatal(err)
+	}
 	if len(keys) == 0 {
 		log.Fatal("AGENTLENS_GATEWAY_API_KEYS vacío: no hay claves que aceptar")
 	}

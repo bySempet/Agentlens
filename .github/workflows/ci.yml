@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        module: [ingestion, api, policy-engine]
+        module: [ingestion, api, policy-engine, shared]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
