@@ -42,13 +42,26 @@ func TestMiddleware_XAgentLensKeyHeaderAlsoWorks(t *testing.T) {
 	}
 }
 
-func TestMiddleware_QueryParamKeyWorks(t *testing.T) {
+func TestMiddleware_QueryParamKeyOnlyForWebSocket(t *testing.T) {
+	// Con upgrade WebSocket, el query param api_key autentica.
 	h := Middleware(http.HandlerFunc(echoTenant), store())
 	req := httptest.NewRequest("GET", "/v1/stream?api_key=key-acme", nil)
+	req.Header.Set("Upgrade", "websocket")
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, req)
 	if rec.Body.String() != "acme" {
-		t.Fatalf("api_key por query debería resolver el tenant, body=%q", rec.Body.String())
+		t.Fatalf("api_key por query (WS) debería resolver el tenant, body=%q", rec.Body.String())
+	}
+}
+
+func TestMiddleware_QueryParamRejectedForREST(t *testing.T) {
+	// Sin upgrade (REST normal), el query param NO debe autenticar.
+	h := Middleware(http.HandlerFunc(echoTenant), store())
+	req := httptest.NewRequest("GET", "/v1/traces?api_key=key-acme", nil)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("api_key por query en REST debería rechazarse (401), code=%d", rec.Code)
 	}
 }
 

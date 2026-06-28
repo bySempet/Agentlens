@@ -33,10 +33,13 @@ _DEFAULT_PATTERNS: List[Tuple[str, str, str]] = [
         "[REDACTED_CARD]",
     ),
     (
-        # Conservador: requiere prefijo + o paréntesis para reducir falsos
-        # positivos sobre números normales.
+        # Conservador para evitar falsos positivos sobre números sueltos: exige
+        # o bien prefijo internacional (+NN ...), o área entre paréntesis, o tres
+        # grupos separados (NNN-NNN-NNNN). Un "1234 5678" suelto NO se redacta.
         "phone",
-        r"(?:\+\d{1,3}[ \-]?)?(?:\(\d{1,4}\)[ \-]?)?\d{3,4}[ \-]?\d{3,4}[ \-]?\d{0,4}",
+        r"(?:\+\d{1,3}[ \-]?\d{2,4}(?:[ \-]?\d{2,4}){1,4}"
+        r"|\(\d{1,4}\)[ \-]?\d{3,4}[ \-]?\d{3,4}"
+        r"|\d{3}[ \-]\d{3}[ \-]\d{2,4})",
         "[REDACTED_PHONE]",
     ),
 ]

@@ -40,10 +40,15 @@ func TenantFromContext(ctx context.Context) (string, bool) {
 	return t, ok
 }
 
-// apiKeyFromRequest extrae la key de "Authorization: Bearer <key>", de la
-// cabecera X-AgentLens-Key o, como último recurso, del query param `api_key`.
-// El query param existe porque los WebSocket del navegador no pueden fijar
-// cabeceras; úsalo solo sobre TLS (la key puede acabar en logs/URLs).
+// isWebSocketUpgrade indica si la petición es un handshake WebSocket.
+func isWebSocketUpgrade(r *http.Request) bool {
+	return strings.EqualFold(r.Header.Get("Upgrade"), "websocket")
+}
+
+// apiKeyFromRequest extrae la key de "Authorization: Bearer <key>" o de la
+// cabecera X-AgentLens-Key. Solo en un handshake WebSocket (donde el navegador
+// no puede fijar cabeceras) se acepta además el query param `api_key`; así las
+// llamadas REST normales nunca autentican por URL (evita keys en logs/historial).
 func apiKeyFromRequest(r *http.Request) string {
 	if h := r.Header.Get("Authorization"); h != "" {
 		if after, ok := strings.CutPrefix(h, "Bearer "); ok {
@@ -53,7 +58,10 @@ func apiKeyFromRequest(r *http.Request) string {
 	if k := strings.TrimSpace(r.Header.Get("X-AgentLens-Key")); k != "" {
 		return k
 	}
-	return strings.TrimSpace(r.URL.Query().Get("api_key"))
+	if isWebSocketUpgrade(r) {
+		return strings.TrimSpace(r.URL.Query().Get("api_key"))
+	}
+	return ""
 }
 
 // Middleware autentica las peticiones y deja el tenant en el contexto. Las rutas

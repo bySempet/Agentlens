@@ -18,6 +18,14 @@ test("redactAttributes no muta el original y respeta no-strings", () => {
   assert.equal(input["user.email"], "bob@test.org"); // original intacto
 });
 
+test("redacta teléfonos pero no números sueltos", () => {
+  const r = new Redactor();
+  assert.match(r.redactText("llama al +34 600 123 456"), /\[REDACTED_PHONE\]/);
+  assert.match(r.redactText("tel 123-456-7890"), /\[REDACTED_PHONE\]/);
+  // Un nº de pedido suelto no debe redactarse como teléfono.
+  assert.equal(r.redactText("pedido 1234 5678"), "pedido 1234 5678");
+});
+
 test("permite patrones propios", () => {
   const r = new Redactor(["email"]);
   r.addPattern("emp", /EMP-\d{4}/g, "[REDACTED_EMP]");

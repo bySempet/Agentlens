@@ -15,8 +15,10 @@ const DEFAULT_PATTERNS: Array<[string, RegExp, string]> = [
   ["iban", /\b[A-Z]{2}\d{2}[A-Z0-9]{11,30}\b/g, "[REDACTED_IBAN]"],
   ["card", /\b(?:\d[ \-]?){13,19}\b/g, "[REDACTED_CARD]"],
   [
+    // Conservador para evitar falsos positivos sobre números sueltos: exige
+    // prefijo internacional, área entre paréntesis o tres grupos separados.
     "phone",
-    /(?:\+\d{1,3}[ \-]?)?(?:\(\d{1,4}\)[ \-]?)?\d{3,4}[ \-]?\d{3,4}[ \-]?\d{0,4}/g,
+    /(?:\+\d{1,3}[ \-]?\d{2,4}(?:[ \-]?\d{2,4}){1,4}|\(\d{1,4}\)[ \-]?\d{3,4}[ \-]?\d{3,4}|\d{3}[ \-]\d{3}[ \-]\d{2,4})/g,
     "[REDACTED_PHONE]",
   ],
 ];
