@@ -31,6 +31,9 @@ Implementado y verificado:
   materializadas (tenant/agent/tokens), ORDER BY tenant-first, índices de salto
   y vista materializada de resumen de trazas para el dashboard. Verificado con
   ClickHouse real (chDB): inserts, aislamiento por tenant y queries sub-ms.
+  **Esquema PostgreSQL del plano de control (E2-T08)**: orgs, usuarios, agentes,
+  API keys y políticas, con migraciones versionadas (`migrate.sh`). Verificado
+  contra PostgreSQL real: migraciones idempotentes, CHECK/UNIQUE y FK CASCADE.
 - **`api/`** — API hot path (Go, E3-T01/T02/T05/T06): lectura de trazas sobre
   ClickHouse. Endpoints de listado (paginado), detalle de traza, **coste agregado
   por agente/modelo** (E3-T06) y **live feed por WebSocket** (E3-T05), con **auth
@@ -67,7 +70,7 @@ agentlens/
 ├── frontend/        # ✅ Dashboard Next.js (E3-T03/T04/T05/T06): + live feed
 ├── policy-engine/   # ✅ Motor OPA/Rego + bundle WASM (Go) (E4-T01/T02)
 ├── policies/        # ◻️ política base + bundle WASM en policy-engine/ (E4-T02)
-└── deploy/          # ✅ docker-compose + esquema ClickHouse (E2-T07); ◻️ Helm (E0-T06)
+└── deploy/          # ✅ docker-compose + ClickHouse (E2-T07) + PostgreSQL (E2-T08); ◻️ Helm
 ```
 
 ## Mapa con el backlog
@@ -77,7 +80,8 @@ auto-instrumentación ampliada + **SDK TypeScript** + **docs + publicación**),
 E0-T03 (gate de latencia), base de E0-T02 (CI), E0-T04 (entorno local), E2-T01
 (Collector base), **E2-T05/T06 (Ingestion Gateway
 en Go: auth + rate limiting por plan)**, **E2-T07 (esquema ClickHouse explícito +
-resumen de trazas)**, **E3-T01/T02 (API de lectura de trazas: paginación + auth
+resumen de trazas)**, **E2-T08 (esquema PostgreSQL del plano de control)**,
+**E3-T01/T02 (API de lectura de trazas: paginación + auth
 por tenant + OpenAPI)**, **E3-T05 (live feed WebSocket)**, **E3-T06 (coste por
 agente/modelo)** y **E3-T03/T04 (dashboard Next.js: lista, timeline, conversación
 GenAI, coste y live feed)**.
@@ -91,10 +95,10 @@ release (PyPI Trusted Publishing + npm) en `.github/workflows/`.
 
 Con esto, **toda la E3 (dashboard de trazas) está completa** y avanza **E4
 (Policy Engine): E4-T01** (evaluación OPA/Rego < 5 ms) y **E4-T02** (bundle WASM).
-Siguiente paso recomendado: **E4-T03** (enforcement en el borde con el WASM) y
-**E2-T08/E3-T07** (PostgreSQL + inventario de agentes; el plano de control). La
-publicación efectiva a PyPI/npm requiere etiquetar un release y configurar los
-secretos/Trusted Publishing del repositorio.
+Con el plano de control en su sitio (E2-T08), siguiente paso recomendado:
+**E3-T07** (inventario/registro de agentes CRUD sobre Postgres) y **E4-T03**
+(enforcement en el borde con el WASM). La publicación efectiva a PyPI/npm requiere
+etiquetar un release y configurar los secretos/Trusted Publishing del repositorio.
 
 ## Arranque rápido
 
