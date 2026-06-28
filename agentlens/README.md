@@ -52,6 +52,10 @@ Implementado y verificado:
   límite de tokens), data-driven y compilado una vez. **Latencia ~60 µs** por
   evaluación (criterio < 5 ms). Compila la política a **bundle WASM** (E4-T02) para
   enforcement en el borde. Librería + CLIs `policyeval`/`buildbundle`; 9 tests.
+- **`compliance-engine/`** — Mapeo regulatorio (Python, E5-T01/T02): traduce las
+  trazas en evidencia de cumplimiento. Modelo de mapeo versionado + **checklist
+  EU AI Act de 40 puntos** (Art. 12/14/50/86 + transversal). Informe con cobertura
+  y gaps; CLI. 5 tests (cobertura 40/40 con trazas ricas, gaps con mínimas).
 - **`examples/`** — Agente de ejemplo end-to-end.
 
 ## Estructura objetivo del monorepo
@@ -63,7 +67,7 @@ agentlens/
 ├── shared/          # ✅ módulo Go compartido: keystore (auth) + observability (OTel)
 ├── collector/       # ◻️ config base en deploy/; procesadores Go custom (E2-T02)
 ├── ingestion/       # ✅ Ingestion Gateway (Go) (E2-T05/T06); ⬜ stream processors
-├── compliance-engine/ # ⬜ Mapeo regulatorio (Python) (E5)
+├── compliance-engine/ # ✅ Mapeo regulatorio EU AI Act (Python) (E5-T01/T02)
 ├── reporter/        # ⬜ Informes firmados (E5-T05)
 ├── forensics/       # ⬜ Reconstrucción de ejecuciones (E6)
 ├── api/             # ✅ API trazas/coste/feed/agentes (Go) (E3-T01/02/05/06/07)
@@ -94,10 +98,10 @@ dashboard) está completo de extremo a extremo, y ambos SDKs (Python + Node) est
 tutorial de integración en 5 pasos (`docs/integration.md`) y workflows de CI y
 release (PyPI Trusted Publishing + npm) en `.github/workflows/`.
 
-Con esto, **la E3 (dashboard de trazas) está completa** (T01–T07) y avanza **E4
-(Policy Engine): E4-T01** (evaluación OPA/Rego < 5 ms) y **E4-T02** (bundle WASM).
-Siguiente paso recomendado: **E4-T03** (enforcement en el borde con el WASM),
-**E4-T06** (UI de gestión de políticas) y **E5** (Compliance Reporter, EU AI Act).
+**E3 completa** (T01–T07). Avanzan además **E4 (Policy Engine): E4-T01/T02** y
+**E5 (Compliance): E5-T01/T02** (mapeo EU AI Act, checklist de 40 puntos).
+Siguiente paso recomendado: **E5-T03** (mapeo GDPR), **E5-T05** (informes PDF
+firmados), **E4-T03** (enforcement en el borde) y **E4-T06** (UI de políticas).
 La publicación efectiva a PyPI/npm requiere etiquetar un release y configurar los
 secretos/Trusted Publishing del repositorio.
 
