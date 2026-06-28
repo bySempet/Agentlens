@@ -23,7 +23,8 @@ Implementado y verificado:
   Rechaza claves inválidas, limita el caudal por tier, sella el tenant
   autoritativo en el Resource (anti-spoofing) y reenvía al Collector. 18 tests
   (unit + integración gRPC real, `-race`) en verde; verificado end-to-end
-  cross-language SDK Python → gateway → downstream.
+  cross-language SDK Python → gateway → downstream. **Auto-observable** (E0-T08):
+  emite sus propias trazas OTel (otelgrpc) si se configura `AGENTLENS_OTLP_ENDPOINT`.
 - **`deploy/`** — Entorno local: OTel Collector (con redacción como segunda
   barrera) + ClickHouse, vía `docker compose`. **Esquema ClickHouse explícito
   (E2-T07)**: tabla de spans compatible con el exporter OTel + columnas
@@ -36,7 +37,8 @@ Implementado y verificado:
   por tenant** (API key Bearer/query → tenant, no spoofeable) y **esquema OpenAPI**
   documentado y servido. `TraceStore` desacoplado (ClickHouse + fake en memoria).
   Tests `-race` (auth, paginación, aislamiento, coste, WS), SQL validado contra
-  ClickHouse real y smoke del binario.
+  ClickHouse real y smoke del binario. **Auto-observable** (E0-T08): trazas OTel
+  propias (otelhttp) si se configura `AGENTLENS_OTLP_ENDPOINT`.
 - **`frontend/`** — Dashboard Next.js (E3-T03/T04/T05/T06): lista de trazas con
   **live feed** en tiempo real, detalle con **vista de conversación GenAI**
   (chat-style) y **timeline de spans**, y **dashboard de coste** por agente/modelo.
@@ -55,7 +57,7 @@ Implementado y verificado:
 agentlens/
 ├── sdk-python/      # ✅ Core Tracing SDK (Python)
 ├── sdk-node/        # ✅ SDK TypeScript @agentlens/node (E1-T11)
-├── shared/          # ✅ módulo Go compartido (keystore auth) ingestion+api
+├── shared/          # ✅ módulo Go compartido: keystore (auth) + observability (OTel)
 ├── collector/       # ◻️ config base en deploy/; procesadores Go custom (E2-T02)
 ├── ingestion/       # ✅ Ingestion Gateway (Go) (E2-T05/T06); ⬜ stream processors
 ├── compliance-engine/ # ⬜ Mapeo regulatorio (Python) (E5)

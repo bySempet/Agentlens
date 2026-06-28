@@ -9,17 +9,22 @@
 //	AGENTLENS_CLICKHOUSE_USER usuario                         (def. agentlens)
 //	AGENTLENS_CLICKHOUSE_PASS contraseña                      (def. agentlens)
 //	AGENTLENS_API_KEYS        pares key:tenant separados por coma (auth)
+//	AGENTLENS_OTLP_ENDPOINT   destino OTLP para auto-observabilidad (opcional)
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"os"
+
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	"github.com/bysempet/agentlens/api/internal/auth"
 	"github.com/bysempet/agentlens/api/internal/httpapi"
 	"github.com/bysempet/agentlens/api/internal/store"
 	"github.com/bysempet/agentlens/shared/keystore"
+	"github.com/bysempet/agentlens/shared/observability"
 )
 
 func getenv(key, def string) string {
@@ -39,6 +44,13 @@ func main() {
 		log.Fatal("AGENTLENS_API_KEYS vacío: no hay claves con las que autenticar")
 	}
 
+	// Auto-observabilidad (E0-T08): la API emite sus propias trazas si hay OTLP.
+	shutdown, err := observability.Init(context.Background(), "agentlens-api")
+	if err != nil {
+		log.Fatalf("observabilidad: %v", err)
+	}
+	defer shutdown(context.Background())
+
 	st, err := store.NewClickHouseStore(
 		getenv("AGENTLENS_CLICKHOUSE_ADDR", "localhost:9000"),
 		getenv("AGENTLENS_CLICKHOUSE_DB", "agentlens"),
@@ -50,8 +62,9 @@ func main() {
 	}
 	defer st.Close()
 
+	handler := otelhttp.NewHandler(httpapi.New(st, auth.NewStaticKeyStore(keys)), "api")
 	log.Printf("API hot path escuchando en %s", listen)
-	if err := http.ListenAndServe(listen, httpapi.New(st, auth.NewStaticKeyStore(keys))); err != nil {
+	if err := http.ListenAndServe(listen, handler); err != nil {
 		log.Fatalf("servidor detenido: %v", err)
 	}
 }

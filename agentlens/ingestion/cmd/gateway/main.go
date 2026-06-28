@@ -11,9 +11,11 @@
 //	AGENTLENS_GATEWAY_API_KEYS   pares key:tenant separados por coma
 //	AGENTLENS_GATEWAY_TENANT_PLANS pares tenant:plan separados por coma
 //	AGENTLENS_GATEWAY_DEFAULT_PLAN plan para tenants no listados  (def. free)
+//	AGENTLENS_OTLP_ENDPOINT      destino OTLP para auto-observabilidad (opcional)
 package main
 
 import (
+	"context"
 	"log"
 	"net"
 	"os"
@@ -25,6 +27,8 @@ import (
 	"github.com/bysempet/agentlens/ingestion/internal/plan"
 	"github.com/bysempet/agentlens/ingestion/internal/ratelimit"
 	"github.com/bysempet/agentlens/shared/keystore"
+	"github.com/bysempet/agentlens/shared/observability"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -85,6 +89,13 @@ func main() {
 	)
 	limiter := ratelimit.New(registry)
 
+	// Auto-observabilidad (E0-T08): el gateway emite sus propias trazas si hay OTLP.
+	shutdown, err := observability.Init(context.Background(), "agentlens-gateway")
+	if err != nil {
+		log.Fatalf("observabilidad: %v", err)
+	}
+	defer shutdown(context.Background())
+
 	forwarder, err := forward.NewOTLPForwarder(downstream)
 	if err != nil {
 		log.Fatalf("no se pudo crear el forwarder a %s: %v", downstream, err)
@@ -92,6 +103,8 @@ func main() {
 	defer forwarder.Close()
 
 	var opts []grpc.ServerOption
+	// Auto-observabilidad: traza cada RPC del gateway.
+	opts = append(opts, grpc.StatsHandler(otelgrpc.NewServerHandler()))
 	// Cadena: primero auth (resuelve el tenant), luego rate limiting por plan.
 	opts = append(opts, grpc.ChainUnaryInterceptor(
 		auth.UnaryInterceptor(auth.NewStaticKeyStore(keys)),
