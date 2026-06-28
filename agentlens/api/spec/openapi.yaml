@@ -80,6 +80,65 @@ paths:
       responses:
         "101": { description: Switching Protocols (WebSocket) }
         "401": { $ref: "#/components/responses/Unauthorized" }
+  /v1/agents:
+    get:
+      summary: Inventario de agentes del tenant
+      responses:
+        "200":
+          description: Lista de agentes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  agents:
+                    type: array
+                    items: { $ref: "#/components/schemas/Agent" }
+                  count: { type: integer }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      summary: Registra un agente (genera agent_id)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+                framework: { type: string }
+                environment: { type: string }
+      responses:
+        "201":
+          description: Agente creado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Agent" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /v1/agents/{agentId}:
+    parameters:
+      - name: agentId
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      summary: Detalle de un agente
+      responses:
+        "200":
+          description: Agente
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Agent" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      summary: Da de baja un agente (status=disabled)
+      responses:
+        "204": { description: Dado de baja }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
   /healthz:
     get:
       summary: Liveness
@@ -153,6 +212,15 @@ components:
         total_input_tokens: { type: integer }
         total_output_tokens: { type: integer }
         total_cost_usd: { type: number }
+    Agent:
+      type: object
+      properties:
+        agent_id: { type: string }
+        name: { type: string }
+        framework: { type: string }
+        environment: { type: string }
+        status: { type: string }
+        created_at: { type: string, format: date-time }
     Error:
       type: object
       properties:

@@ -34,14 +34,14 @@ Implementado y verificado:
   **Esquema PostgreSQL del plano de control (E2-T08)**: orgs, usuarios, agentes,
   API keys y políticas, con migraciones versionadas (`migrate.sh`). Verificado
   contra PostgreSQL real: migraciones idempotentes, CHECK/UNIQUE y FK CASCADE.
-- **`api/`** — API hot path (Go, E3-T01/T02/T05/T06): lectura de trazas sobre
-  ClickHouse. Endpoints de listado (paginado), detalle de traza, **coste agregado
-  por agente/modelo** (E3-T06) y **live feed por WebSocket** (E3-T05), con **auth
-  por tenant** (API key Bearer/query → tenant, no spoofeable) y **esquema OpenAPI**
-  documentado y servido. `TraceStore` desacoplado (ClickHouse + fake en memoria).
-  Tests `-race` (auth, paginación, aislamiento, coste, WS), SQL validado contra
-  ClickHouse real y smoke del binario. **Auto-observable** (E0-T08): trazas OTel
-  propias (otelhttp) si se configura `AGENTLENS_OTLP_ENDPOINT`.
+- **`api/`** — API hot path (Go, E3-T01/T02/T05/T06/T07): lectura de trazas sobre
+  ClickHouse (listado, detalle, **coste** E3-T06, **live feed WebSocket** E3-T05) e
+  **inventario de agentes CRUD** sobre Postgres (E3-T07), con **auth por tenant**
+  (API key Bearer/query → tenant, no spoofeable) y **esquema OpenAPI** documentado.
+  Stores desacoplados (ClickHouse/Postgres + fakes en memoria). Tests `-race`
+  (auth, paginación, aislamiento, coste, WS, CRUD), SQL validado contra ClickHouse
+  real e **inventario verificado contra Postgres real**. **Auto-observable**
+  (E0-T08): trazas OTel propias (otelhttp) si se configura `AGENTLENS_OTLP_ENDPOINT`.
 - **`frontend/`** — Dashboard Next.js (E3-T03/T04/T05/T06): lista de trazas con
   **live feed** en tiempo real, detalle con **vista de conversación GenAI**
   (chat-style) y **timeline de spans**, y **dashboard de coste** por agente/modelo.
@@ -66,7 +66,7 @@ agentlens/
 ├── compliance-engine/ # ⬜ Mapeo regulatorio (Python) (E5)
 ├── reporter/        # ⬜ Informes firmados (E5-T05)
 ├── forensics/       # ⬜ Reconstrucción de ejecuciones (E6)
-├── api/             # ✅ API trazas/coste/live feed (Go) (E3-T01/T02/T05/T06)
+├── api/             # ✅ API trazas/coste/feed/agentes (Go) (E3-T01/02/05/06/07)
 ├── frontend/        # ✅ Dashboard Next.js (E3-T03/T04/T05/T06): + live feed
 ├── policy-engine/   # ✅ Motor OPA/Rego + bundle WASM (Go) (E4-T01/T02)
 ├── policies/        # ◻️ política base + bundle WASM en policy-engine/ (E4-T02)
@@ -83,8 +83,9 @@ en Go: auth + rate limiting por plan)**, **E2-T07 (esquema ClickHouse explícito
 resumen de trazas)**, **E2-T08 (esquema PostgreSQL del plano de control)**,
 **E3-T01/T02 (API de lectura de trazas: paginación + auth
 por tenant + OpenAPI)**, **E3-T05 (live feed WebSocket)**, **E3-T06 (coste por
-agente/modelo)** y **E3-T03/T04 (dashboard Next.js: lista, timeline, conversación
-GenAI, coste y live feed)**.
+agente/modelo)**, **E3-T07 (inventario de agentes CRUD sobre Postgres)** y
+**E3-T03/T04 (dashboard Next.js: lista, timeline, conversación GenAI, coste y
+live feed)**. **Épica E3 completa.**
 
 Con esto, el camino visible del MVP (SDK → ingesta → almacenamiento → API →
 dashboard) está completo de extremo a extremo, y ambos SDKs (Python + Node) están
@@ -93,12 +94,12 @@ dashboard) está completo de extremo a extremo, y ambos SDKs (Python + Node) est
 tutorial de integración en 5 pasos (`docs/integration.md`) y workflows de CI y
 release (PyPI Trusted Publishing + npm) en `.github/workflows/`.
 
-Con esto, **toda la E3 (dashboard de trazas) está completa** y avanza **E4
+Con esto, **la E3 (dashboard de trazas) está completa** (T01–T07) y avanza **E4
 (Policy Engine): E4-T01** (evaluación OPA/Rego < 5 ms) y **E4-T02** (bundle WASM).
-Con el plano de control en su sitio (E2-T08), siguiente paso recomendado:
-**E3-T07** (inventario/registro de agentes CRUD sobre Postgres) y **E4-T03**
-(enforcement en el borde con el WASM). La publicación efectiva a PyPI/npm requiere
-etiquetar un release y configurar los secretos/Trusted Publishing del repositorio.
+Siguiente paso recomendado: **E4-T03** (enforcement en el borde con el WASM),
+**E4-T06** (UI de gestión de políticas) y **E5** (Compliance Reporter, EU AI Act).
+La publicación efectiva a PyPI/npm requiere etiquetar un release y configurar los
+secretos/Trusted Publishing del repositorio.
 
 ## Arranque rápido
 

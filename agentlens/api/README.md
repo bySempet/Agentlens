@@ -12,6 +12,8 @@ por tenant y con esquema OpenAPI documentado.
 | `GET` | `/v1/traces/{traceId}` | sí | Detalle: spans de la traza (timeline) |
 | `GET` | `/v1/cost` | sí | Coste agregado por agente y modelo (E3-T06) |
 | `GET` | `/v1/stream` | sí | Live feed de trazas por WebSocket (E3-T05) |
+| `GET`/`POST` | `/v1/agents` | sí | Inventario de agentes; alta (genera agent_id) (E3-T07) |
+| `GET`/`DELETE` | `/v1/agents/{agentId}` | sí | Detalle / baja de un agente (E3-T07) |
 | `GET` | `/openapi.yaml` | no | Especificación OpenAPI 3.0 (servida embebida) |
 | `GET` | `/healthz` | no | Liveness |
 
@@ -44,6 +46,8 @@ por tenant y con esquema OpenAPI documentado.
 | `AGENTLENS_CLICKHOUSE_USER` | `agentlens` | Usuario |
 | `AGENTLENS_CLICKHOUSE_PASS` | `agentlens` | Contraseña |
 | `AGENTLENS_API_KEYS` | — | Pares `key:tenant` separados por coma (auth) |
+| `AGENTLENS_POSTGRES_DSN` | — | DSN del plano de control; habilita `/v1/agents` (E3-T07) |
+| `AGENTLENS_OTLP_ENDPOINT` | — | Destino OTLP para auto-observabilidad (E0-T08) |
 
 ## Ejecutar
 

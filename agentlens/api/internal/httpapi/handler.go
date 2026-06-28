@@ -11,6 +11,7 @@ import (
 	"github.com/coder/websocket"
 	"github.com/coder/websocket/wsjson"
 
+	"github.com/bysempet/agentlens/api/internal/agents"
 	"github.com/bysempet/agentlens/api/internal/auth"
 	"github.com/bysempet/agentlens/api/internal/cost"
 	"github.com/bysempet/agentlens/api/internal/store"
@@ -31,6 +32,11 @@ func WithStreamInterval(d time.Duration) Option {
 	return func(h *handler) { h.streamInterval = d }
 }
 
+// WithAgentStore habilita los endpoints de inventario de agentes (E3-T07).
+func WithAgentStore(s agents.Store) Option {
+	return func(h *handler) { h.agents = s }
+}
+
 // New construye el handler HTTP: registra las rutas y las envuelve con la
 // autenticación por API key. /healthz y /openapi.yaml son públicas.
 func New(s store.TraceStore, keys auth.KeyStore, opts ...Option) http.Handler {
@@ -43,6 +49,12 @@ func New(s store.TraceStore, keys auth.KeyStore, opts ...Option) http.Handler {
 	mux.HandleFunc("GET /v1/traces/{traceId}", h.getTrace)
 	mux.HandleFunc("GET /v1/cost", h.getCost)
 	mux.HandleFunc("GET /v1/stream", h.stream)
+	if h.agents != nil {
+		mux.HandleFunc("POST /v1/agents", h.createAgent)
+		mux.HandleFunc("GET /v1/agents", h.listAgents)
+		mux.HandleFunc("GET /v1/agents/{agentId}", h.getAgent)
+		mux.HandleFunc("DELETE /v1/agents/{agentId}", h.deleteAgent)
+	}
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
@@ -56,6 +68,7 @@ func New(s store.TraceStore, keys auth.KeyStore, opts ...Option) http.Handler {
 // handler agrupa los manejadores sobre un TraceStore.
 type handler struct {
 	store          store.TraceStore
+	agents         agents.Store
 	streamInterval time.Duration
 }
 

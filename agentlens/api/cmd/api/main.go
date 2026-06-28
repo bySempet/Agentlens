@@ -10,6 +10,7 @@
 //	AGENTLENS_CLICKHOUSE_PASS contraseña                      (def. agentlens)
 //	AGENTLENS_API_KEYS        pares key:tenant separados por coma (auth)
 //	AGENTLENS_OTLP_ENDPOINT   destino OTLP para auto-observabilidad (opcional)
+//	AGENTLENS_POSTGRES_DSN    DSN del plano de control (habilita /v1/agents)
 package main
 
 import (
@@ -20,6 +21,7 @@ import (
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
+	"github.com/bysempet/agentlens/api/internal/agents"
 	"github.com/bysempet/agentlens/api/internal/auth"
 	"github.com/bysempet/agentlens/api/internal/httpapi"
 	"github.com/bysempet/agentlens/api/internal/store"
@@ -62,7 +64,19 @@ func main() {
 	}
 	defer st.Close()
 
-	handler := otelhttp.NewHandler(httpapi.New(st, auth.NewStaticKeyStore(keys)), "api")
+	opts := []httpapi.Option{}
+	// Inventario de agentes (E3-T07) si hay plano de control PostgreSQL.
+	if dsn := os.Getenv("AGENTLENS_POSTGRES_DSN"); dsn != "" {
+		as, err := agents.NewPostgresStore(context.Background(), dsn)
+		if err != nil {
+			log.Fatalf("no se pudo conectar a Postgres: %v", err)
+		}
+		defer as.Close()
+		opts = append(opts, httpapi.WithAgentStore(as))
+		log.Print("inventario de agentes habilitado (/v1/agents)")
+	}
+
+	handler := otelhttp.NewHandler(httpapi.New(st, auth.NewStaticKeyStore(keys), opts...), "api")
 	log.Printf("API hot path escuchando en %s", listen)
 	if err := http.ListenAndServe(listen, handler); err != nil {
 		log.Fatalf("servidor detenido: %v", err)
