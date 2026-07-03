@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agentlens"
+version = "0.1.0"
+description = "Gobernanza y observabilidad para agentes de IA, basada en OpenTelemetry GenAI."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "Apache-2.0" }
+authors = [{ name = "AgentLens" }]
+keywords = ["llm", "agents", "observability", "opentelemetry", "governance", "eu-ai-act"]
+
+dependencies = [
+    "opentelemetry-api>=1.27",
+    "opentelemetry-sdk>=1.27",
+    "opentelemetry-semantic-conventions>=0.48b0",
+    "opentelemetry-exporter-otlp-proto-grpc>=1.27",
+]
+
+[project.optional-dependencies]
+openai = ["opentelemetry-instrumentation-openai-v2"]
+langchain = ["opentelemetry-instrumentation-langchain"]
+dev = ["pytest>=8", "pytest-cov"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
