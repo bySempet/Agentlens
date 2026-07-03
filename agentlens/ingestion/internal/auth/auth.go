@@ -7,6 +7,7 @@ package auth
 import (
 	"context"
 
+	"github.com/bysempet/agentlens/shared/keystore"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -19,34 +20,12 @@ const MetadataKey = "x-agentlens-key"
 
 type tenantCtxKey struct{}
 
-// KeyStore resuelve una API key a su tenant. La interfaz permite sustituir el
-// almacén en memoria del MVP por uno respaldado por Postgres/Redis sin tocar el
-// interceptor ni el servidor.
-type KeyStore interface {
-	// TenantForKey devuelve el tenant asociado a la key y true si es válida.
-	TenantForKey(apiKey string) (tenantID string, ok bool)
-}
+// KeyStore y StaticKeyStore se comparten con la API de lectura (módulo shared)
+// para no divergir en la lógica de autenticación por clave.
+type KeyStore = keystore.KeyStore
 
-// StaticKeyStore es un KeyStore en memoria (key -> tenant). Apto para el MVP,
-// tests y despliegues air-gapped con un set fijo de claves.
-type StaticKeyStore struct {
-	keys map[string]string
-}
-
-// NewStaticKeyStore crea el store a partir de un mapa key -> tenantID.
-func NewStaticKeyStore(keys map[string]string) *StaticKeyStore {
-	cp := make(map[string]string, len(keys))
-	for k, v := range keys {
-		cp[k] = v
-	}
-	return &StaticKeyStore{keys: cp}
-}
-
-// TenantForKey implementa KeyStore.
-func (s *StaticKeyStore) TenantForKey(apiKey string) (string, bool) {
-	tenant, ok := s.keys[apiKey]
-	return tenant, ok
-}
+// NewStaticKeyStore crea un KeyStore en memoria (key -> tenant).
+var NewStaticKeyStore = keystore.NewStaticKeyStore
 
 // TenantFromContext recupera el tenant inyectado por el interceptor. El segundo
 // valor es false si la petición no pasó por autenticación.

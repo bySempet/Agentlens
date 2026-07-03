@@ -11,6 +11,15 @@ requires-python = ">=3.9"
 license = { text = "Apache-2.0" }
 authors = [{ name = "AgentLens" }]
 keywords = ["llm", "agents", "observability", "opentelemetry", "governance", "eu-ai-act"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: System :: Monitoring",
+    "Typing :: Typed",
+]
 
 dependencies = [
     "opentelemetry-api>=1.27",
@@ -20,12 +29,24 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# Instrumentadores por framework (best-effort en runtime; instala el que uses).
 openai = ["opentelemetry-instrumentation-openai-v2"]
 langchain = ["opentelemetry-instrumentation-langchain"]
+crewai = ["opentelemetry-instrumentation-crewai"]
+bedrock = ["opentelemetry-instrumentation-bedrock"]
 dev = ["pytest>=8", "pytest-cov"]
+
+[project.urls]
+Homepage = "https://github.com/bysempet/agentlens"
+Repository = "https://github.com/bysempet/agentlens"
+Documentation = "https://github.com/bysempet/agentlens/tree/main/docs"
+Issues = "https://github.com/bysempet/agentlens/issues"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+agentlens = ["py.typed"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]

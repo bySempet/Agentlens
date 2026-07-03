@@ -37,6 +37,20 @@ def test_redact_attributes_does_not_mutate_original():
     assert out["model"] == "gpt-4o"  # no es PII, no se toca
 
 
+def test_redacts_phone_formats():
+    r = Redactor()
+    assert "[REDACTED_PHONE]" in r.redact_text("llama al +34 600 123 456")
+    assert "[REDACTED_PHONE]" in r.redact_text("tel 123-456-7890")
+
+
+def test_phone_does_not_overredact_plain_numbers():
+    r = Redactor()
+    # Dos grupos sueltos (p.ej. un nº de pedido) no deben tomarse por teléfono.
+    out = r.redact_text("pedido 1234 5678 confirmado")
+    assert out == "pedido 1234 5678 confirmado"
+    assert "[REDACTED_PHONE]" not in r.redact_text("cantidad 4096")
+
+
 def test_custom_pattern():
     r = Redactor(enabled=["email"])
     r.add_pattern("emp_id", r"EMP-\d{5}", "[REDACTED_EMP]")

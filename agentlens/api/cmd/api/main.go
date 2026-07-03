@@ -1,0 +1,84 @@
+// Command api es la API hot path de lectura de trazas de AgentLens (E3-T01):
+// listado y detalle de trazas sobre ClickHouse, con paginación.
+//
+// Configuración por entorno:
+//
+//	AGENTLENS_API_LISTEN     dirección de escucha HTTP        (def. :8080)
+//	AGENTLENS_CLICKHOUSE_ADDR endpoint nativo de ClickHouse   (def. localhost:9000)
+//	AGENTLENS_CLICKHOUSE_DB   base de datos                   (def. agentlens)
+//	AGENTLENS_CLICKHOUSE_USER usuario                         (def. agentlens)
+//	AGENTLENS_CLICKHOUSE_PASS contraseña                      (def. agentlens)
+//	AGENTLENS_API_KEYS        pares key:tenant separados por coma (auth)
+//	AGENTLENS_OTLP_ENDPOINT   destino OTLP para auto-observabilidad (opcional)
+//	AGENTLENS_POSTGRES_DSN    DSN del plano de control (habilita /v1/agents)
+package main
+
+import (
+	"context"
+	"log"
+	"net/http"
+	"os"
+
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+
+	"github.com/bysempet/agentlens/api/internal/agents"
+	"github.com/bysempet/agentlens/api/internal/auth"
+	"github.com/bysempet/agentlens/api/internal/httpapi"
+	"github.com/bysempet/agentlens/api/internal/store"
+	"github.com/bysempet/agentlens/shared/keystore"
+	"github.com/bysempet/agentlens/shared/observability"
+)
+
+func getenv(key, def string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return def
+}
+
+func main() {
+	listen := getenv("AGENTLENS_API_LISTEN", ":8080")
+	keys, err := keystore.ParseSpec(os.Getenv("AGENTLENS_API_KEYS"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	if len(keys) == 0 {
+		log.Fatal("AGENTLENS_API_KEYS vacío: no hay claves con las que autenticar")
+	}
+
+	// Auto-observabilidad (E0-T08): la API emite sus propias trazas si hay OTLP.
+	shutdown, err := observability.Init(context.Background(), "agentlens-api")
+	if err != nil {
+		log.Fatalf("observabilidad: %v", err)
+	}
+	defer shutdown(context.Background())
+
+	st, err := store.NewClickHouseStore(
+		getenv("AGENTLENS_CLICKHOUSE_ADDR", "localhost:9000"),
+		getenv("AGENTLENS_CLICKHOUSE_DB", "agentlens"),
+		getenv("AGENTLENS_CLICKHOUSE_USER", "agentlens"),
+		getenv("AGENTLENS_CLICKHOUSE_PASS", "agentlens"),
+	)
+	if err != nil {
+		log.Fatalf("no se pudo conectar a ClickHouse: %v", err)
+	}
+	defer st.Close()
+
+	opts := []httpapi.Option{}
+	// Inventario de agentes (E3-T07) si hay plano de control PostgreSQL.
+	if dsn := os.Getenv("AGENTLENS_POSTGRES_DSN"); dsn != "" {
+		as, err := agents.NewPostgresStore(context.Background(), dsn)
+		if err != nil {
+			log.Fatalf("no se pudo conectar a Postgres: %v", err)
+		}
+		defer as.Close()
+		opts = append(opts, httpapi.WithAgentStore(as))
+		log.Print("inventario de agentes habilitado (/v1/agents)")
+	}
+
+	handler := otelhttp.NewHandler(httpapi.New(st, auth.NewStaticKeyStore(keys), opts...), "api")
+	log.Printf("API hot path escuchando en %s", listen)
+	if err := http.ListenAndServe(listen, handler); err != nil {
+		log.Fatalf("servidor detenido: %v", err)
+	}
+}

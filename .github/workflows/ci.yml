@@ -1,0 +1,146 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+
+jobs:
+  python-sdk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install & test
+        working-directory: agentlens/sdk-python
+        run: |
+          pip install -e ".[dev]"
+          pytest -q
+
+  compliance-engine:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install & test
+        working-directory: agentlens/compliance-engine
+        run: |
+          pip install -e ".[dev]"
+          pytest -q
+
+  go-services:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        module: [ingestion, api, policy-engine, shared]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+      - name: Build, vet & test
+        working-directory: agentlens/${{ matrix.module }}
+        run: |
+          go build ./...
+          go vet ./...
+          go test -race ./...
+
+  api-postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: agentlens
+          POSTGRES_USER: agentlens
+          POSTGRES_PASSWORD: agentlens
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U agentlens"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+      - name: Install psql client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Aplica migraciones (E2-T08)
+        working-directory: agentlens/deploy/postgres
+        env:
+          PGPASSWORD: agentlens
+        run: PSQL="psql -h localhost -p 5432 -U agentlens -d agentlens" ./migrate.sh
+      - name: Verifica el esquema
+        working-directory: agentlens/deploy/postgres
+        env:
+          PGPASSWORD: agentlens
+        run: psql -h localhost -p 5432 -U agentlens -d agentlens -v ON_ERROR_STOP=1 -f verify_schema.sql
+      - name: Test de integración del inventario (E3-T07)
+        working-directory: agentlens/api
+        env:
+          AGENTLENS_TEST_PG_DSN: "postgres://agentlens:agentlens@localhost:5432/agentlens?sslmode=disable"
+        run: go test ./internal/agents/ -run TestPostgresStore_CRUD -v
+
+  policy-bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+      - name: Build WASM policy bundle (E4-T02)
+        working-directory: agentlens/policy-engine
+        run: go run ./cmd/buildbundle -out build/bundle.tar.gz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: policy-bundle
+          path: agentlens/policy-engine/build/bundle.tar.gz
+
+  node-sdk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Typecheck, test & build
+        working-directory: agentlens/sdk-node
+        run: |
+          npm ci
+          npm run typecheck
+          npm test
+          npm run build
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Build dashboard
+        working-directory: agentlens/frontend
+        run: |
+          npm ci
+          npm run build
+
+  frontend-e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install deps
+        working-directory: agentlens/frontend
+        run: npm ci
+      - name: Install Playwright browser
+        working-directory: agentlens/frontend
+        run: npx playwright install --with-deps chromium
+      - name: E2E (Playwright)
+        working-directory: agentlens/frontend
+        run: npm run test:e2e

@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agentlens-compliance"
+version = "0.1.0"
+description = "Motor de mapeo regulatorio de AgentLens: traza -> requisito (EU AI Act, GDPR)."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "Apache-2.0" }
+authors = [{ name = "AgentLens" }]
+keywords = ["compliance", "eu-ai-act", "gdpr", "ai-governance", "observability"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

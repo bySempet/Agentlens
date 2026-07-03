@@ -17,6 +17,22 @@ services:
         soft: 262144
         hard: 262144
 
+  # Plano de control (orgs/usuarios/agentes/políticas). Las migraciones de
+  # deploy/postgres/migrations se aplican al primer arranque. En producción se usa
+  # el runner versionado deploy/postgres/migrate.sh.
+  postgres:
+    image: postgres:16
+    container_name: agentlens-postgres
+    environment:
+      POSTGRES_DB: agentlens
+      POSTGRES_USER: agentlens
+      POSTGRES_PASSWORD: agentlens
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./postgres/migrations:/docker-entrypoint-initdb.d:ro
+      - pg-data:/var/lib/postgresql/data
+
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.110.0
     container_name: agentlens-collector
@@ -31,3 +47,4 @@ services:
 
 volumes:
   ch-data:
+  pg-data:

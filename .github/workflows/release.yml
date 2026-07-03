@@ -1,0 +1,43 @@
+name: Release
+
+# Publica los SDKs al etiquetar una versión (p.ej. v0.1.0).
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  publish-python:
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      id-token: write   # PyPI Trusted Publishing (OIDC), sin tokens en repo
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Build distribution
+        working-directory: agentlens/sdk-python
+        run: |
+          pip install build
+          python -m build
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: agentlens/sdk-python/dist
+
+  publish-node:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+      - name: Build & publish to npm
+        working-directory: agentlens/sdk-node
+        run: |
+          npm ci
+          npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

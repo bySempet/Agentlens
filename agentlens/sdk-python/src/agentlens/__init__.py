@@ -12,6 +12,7 @@ from .instrument import (
     shutdown,
     tool,
 )
+from .instrumentation import ActivationResult, Instrumentor, activate
 from .redaction import Redactor
 
 __version__ = "0.1.0"
@@ -27,5 +28,8 @@ __all__ = [
     "GenAI",
     "CONVENTIONS_VERSION",
     "normalize_attributes",
+    "activate",
+    "Instrumentor",
+    "ActivationResult",
     "__version__",
 ]
