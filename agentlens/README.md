@@ -54,9 +54,9 @@ Implementado y verificado:
 - **`compliance-engine/`** — Mapeo regulatorio (Python, E5-T01..T06): traduce las
   trazas en evidencia de cumplimiento. Modelo versionado + **checklist EU AI Act
   de 40 puntos** (Art. 12/14/50/86) y **mapeo GDPR** (Art. 5/15/17/30/33). Informe
-  con cobertura/gaps, **PDF firmado (Ed25519) verificable** (E5-T05) y **madurez
-  por framework/artículo** (E5-T06). CLI. 14 tests (cobertura, gaps, PDF firmado +
-  detección de manipulación, madurez).
+  con cobertura/gaps, **PDF firmado (Ed25519) verificable contra clave de confianza** (E5-T05) y **madurez
+  por framework/artículo** (E5-T06). CLI. 16 tests (cobertura, gaps, PDF firmado +
+  detección de manipulación y re-firma, madurez).
 - **`examples/`** — Agente de ejemplo end-to-end.
 
 ## Estructura objetivo del monorepo

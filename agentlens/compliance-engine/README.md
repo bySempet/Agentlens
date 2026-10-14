@@ -65,15 +65,26 @@ gaps con trazas mínimas.
 
 ## Informe PDF firmado (E5-T05)
 
-`generate_signed_report(report, "informe.pdf")` genera un **PDF** con el checklist
-y la cobertura, y un sidecar `informe.pdf.sig.json` con el manifiesto firmado
-(**Ed25519**): hash SHA-256 del PDF, cobertura y **sello de tiempo**.
-`verify_signed_report(pdf, sidecar)` recomputa el hash y valida la firma, de modo
-que el informe es **inalterable y verificable** (cualquier cambio lo invalida).
+`generate_signed_report(report, "informe.pdf", private_pem)` genera un **PDF** con el
+checklist y la cobertura, y un sidecar `informe.pdf.sig.json` con el manifiesto
+firmado (**Ed25519**): hash SHA-256 del PDF, cobertura, **sello de tiempo** y huella
+de la clave firmante (`signer_key_sha256`).
+
+`verify_signed_report(pdf, sidecar, trusted_public_pem)` recomputa el hash y valida
+la firma con la **clave pública de confianza** de la organización emisora, obtenida
+por un canal independiente. La clave pública que viaja en el sidecar es solo
+informativa: si se aceptara, cualquiera podría re-firmar un informe falso con su
+propia clave. Falla si cambia el PDF, el manifiesto o la clave firmante.
 
 ```bash
-cat spans.json | python -m agentlens_compliance --framework eu-ai-act --pdf informe.pdf
+python -m agentlens_compliance --keygen firma            # firma.key (0600) + firma.pub
+cat spans.json | python -m agentlens_compliance --framework eu-ai-act \
+    --pdf informe.pdf --signing-key firma.key            # o AGENTLENS_SIGNING_KEY_FILE
+python -m agentlens_compliance --verify informe.pdf --pubkey firma.pub   # exit 0/1
 ```
+
+Limitaciones: el sello de tiempo lo declara el firmante (no es un TSA RFC 3161) y
+la custodia/rotación de la clave privada corresponde a E0-T09 (gestión de secretos).
 
 Requiere el extra `pdf` (`pip install -e ".[pdf]"`: reportlab + cryptography). El
 resto del paquete funciona sin él.
@@ -81,5 +92,4 @@ resto del paquete funciona sin él.
 ## Siguiente
 
 - **E5-T04**: mapeo ISO/IEC 42001 y NIST AI RMF.
-- **E5-T06**: dashboard de madurez de compliance.
 - **E5-T07**: gestión de evidencias (traza ↔ requisito ↔ informe).
