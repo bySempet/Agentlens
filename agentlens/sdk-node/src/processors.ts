@@ -4,7 +4,7 @@
 
 import type { Attributes } from "@opentelemetry/api";
 import type { ReadableSpan, SpanExporter } from "@opentelemetry/sdk-trace-base";
-import type { ExportResult } from "@opentelemetry/core";
+import { ExportResultCode, type ExportResult } from "@opentelemetry/core";
 
 import type { AgentLensConfig } from "./config.js";
 import { normalizeAttributes } from "./conventions.js";
@@ -16,6 +16,9 @@ import {
   externalizeAttributes,
 } from "./payloads.js";
 import { Redactor } from "./redaction.js";
+
+/** Spans transformados por tick del event loop (ver AgentLensSpanExporter.export). */
+const TRANSFORM_CHUNK = 64;
 
 /** Envuelve un span exponiendo unos atributos transformados, preservando el resto. */
 function spanWithAttributes(span: ReadableSpan, attributes: Attributes): ReadableSpan {
@@ -61,8 +64,29 @@ export class AgentLensSpanExporter implements SpanExporter {
     return spanWithAttributes(span, attrs);
   }
 
+  /**
+   * El BatchSpanProcessor de OTel JS llama a export() de forma síncrona dentro de
+   * span.end() cuando se llena un lote: transformar ahí (redacción + payloads)
+   * cargaría decenas de ms sobre la acción del agente (E0-T03). Por eso la
+   * transformación se difiere fuera del hot path y se hace por trozos, cediendo
+   * el event loop entre ellos.
+   */
   export(spans: ReadableSpan[], resultCallback: (result: ExportResult) => void): void {
-    this.inner.export(spans.map((s) => this.transform(s)), resultCallback);
+    const out: ReadableSpan[] = [];
+    const step = (from: number) => {
+      try {
+        const to = Math.min(from + TRANSFORM_CHUNK, spans.length);
+        for (let i = from; i < to; i++) out.push(this.transform(spans[i]));
+        if (to < spans.length) {
+          setImmediate(step, to);
+        } else {
+          this.inner.export(out, resultCallback);
+        }
+      } catch (error) {
+        resultCallback({ code: ExportResultCode.FAILED, error: error as Error });
+      }
+    };
+    setImmediate(step, 0);
   }
 
   shutdown(): Promise<void> {

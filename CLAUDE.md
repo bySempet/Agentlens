@@ -26,7 +26,7 @@ Policy Engine (Go, OPA/Rego -> bundle WASM)    Compliance Engine (Python: mapeos
 
 | Épica | Hecho | Pendiente relevante |
 | --- | --- | --- |
-| E0 Fundamentos | T02 (CI), T04 (compose local), T08 (auto-observabilidad OTel) | **T03: figura como hecha pero no existe ningún benchmark/gate de latencia en el repo**; T01/T05–T07/T09 |
+| E0 Fundamentos | T02 (CI), T03 (gate de latencia en ambos SDKs), T04 (compose local), T08 (auto-observabilidad OTel) | T01/T05–T07/T09 |
 | E1 SDK | **Completa** (T01–T14; Python + `@agentlens/node`) | Publicación real en PyPI/npm requiere tag + secretos |
 | E2 Ingesta | T01, T05, T06, T07, T08 | T02 (Presidio), T03, T04, T09–T13 |
 | E3 API + dashboard | **Completa** (T01–T07) | — |
@@ -64,6 +64,8 @@ Huecos conocidos:
     el listado se consulta vía la vista `agentlens.traces`.
   - El PDF firmado se verifica **contra una clave pública de confianza**, nunca con la que
     trae el sidecar.
+  - Nada síncrono ni pesado en el hot path del SDK: el gate de E0-T03 (p99 ≤ 5 ms con
+    backend lento; en Node además sin picos > 20 ms) lo vigila en `pytest`/`npm test`.
   - El enforcement local es **fail-closed** y el bundle WASM debe llevar su `data.json`
     (`Config.Data()`): sin configuración la política lo permite todo.
 
@@ -89,6 +91,10 @@ for m in ingestion api policy-engine shared; do (cd $m && go build ./... && go v
 
 # SDK Node
 (cd sdk-node && npm ci && npm run typecheck && npm test && npm run build)
+
+# Gate de latencia del SDK (E0-T03; ya incluido en las suites anteriores), con cifras:
+(cd sdk-python && pytest -q -s tests/test_latency_gate.py)
+(cd sdk-node && node --import tsx --test test/latency-gate.test.ts)
 
 # Frontend: build + E2E Playwright (Chromium, con fixtures)
 (cd frontend && npm ci && npm run build && npm run test:e2e)

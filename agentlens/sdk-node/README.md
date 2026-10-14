@@ -51,3 +51,10 @@ npm run build       # emite dist/ (ESM + .d.ts)
 Los tests cubren la normalización de convenciones, la redacción y el flujo
 end-to-end (enriquecimiento + redacción + externalización + convención) con un
 `InMemorySpanExporter`, además del cierre de spans en callbacks async.
+
+**Gate de latencia (E0-T03)**: `test/latency-gate.test.ts` mide el coste por acción
+en el hot path con un backend lento y **rompe el build si el p99 supera 5 ms** o si
+alguna acción supera 4× ese presupuesto (`AGENTLENS_LATENCY_BUDGET_MS`). Medido: p99 ≈
+0,15 ms, máx. < 1 ms. El BatchSpanProcessor de OTel JS llama a `export()` dentro de
+`span.end()` al llenarse un lote; por eso `AgentLensSpanExporter` difiere la
+redacción/externalización fuera del hot path y la trocea (64 spans por tick).

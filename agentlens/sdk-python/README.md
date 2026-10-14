@@ -109,4 +109,14 @@ Sin Docker: `AGENTLENS_CONSOLE=1 python examples/simple_agent.py`.
 ```bash
 pip install -e ".[dev]"
 pytest -q
+pytest -q -s tests/test_latency_gate.py   # gate de latencia con las cifras medidas
 ```
+
+**Gate de latencia (E0-T03)**: `tests/test_latency_gate.py` mide el coste por acción
+en el hot path (`agent()` + `tool()` con PII y un payload de ~10 KB) contra un backend
+que tarda 50 ms por export, y **rompe el build si el p99 supera 5 ms**
+(`AGENTLENS_LATENCY_BUDGET_MS`). Se mide también con enforcement local (`policy.wasm`).
+Un meta-test comprueba que el gate salta si el export pasara al hot path. Medido en la
+EC2: p99 ≈ 0,4–0,9 ms sin política y ≈ 1,2–1,9 ms con política. Los picos aislados
+(máx. de decenas de ms) vienen del GIL que comparte el hilo de export; por eso el gate
+de Python mira el p99.
