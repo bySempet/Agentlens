@@ -119,6 +119,31 @@ class Facts:
     def retention_configured(self) -> bool:
         return self._any_resource("agentlens.retention.days")
 
+    # --- hechos específicos de GDPR (E5-T03) ---
+    @property
+    def lawful_basis_recorded(self) -> bool:
+        # Base legal del tratamiento declarada en el recurso/span.
+        return self._any_resource("agentlens.gdpr.lawful_basis") or self._any_attr("agentlens.gdpr.lawful_basis")
+
+    @property
+    def access_logged(self) -> bool:
+        # Registro de accesos a datos (quién/qué): span de acceso o atributo.
+        return any(s.name.startswith("execute_tool") for s in self.spans) or self._any_attr("agentlens.data.accessed")
+
+    @property
+    def data_subject_identified(self) -> bool:
+        # Vinculación con un interesado (pseudonimizado) para ejercicio de derechos.
+        return self._any_attr("agentlens.gdpr.subject_id")
+
+    @property
+    def purpose_recorded(self) -> bool:
+        return self._any_attr("agentlens.gdpr.purpose") or self._any_resource("agentlens.gdpr.purpose")
+
+    @property
+    def erasure_supported(self) -> bool:
+        # La externalización de payloads permite borrar el contenido (derecho al olvido).
+        return self._any_attr("agentlens.payload.externalized")
+
     @classmethod
     def from_dicts(cls, spans: List[Dict[str, Any]]) -> "Facts":
         out = []

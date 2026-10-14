@@ -29,6 +29,13 @@ de cumplimiento** frente a marcos regulatorios. Incluye el mapeo del **EU AI Act
 
 Cada punto se marca cubierto si las trazas aportan la evidencia correspondiente.
 
+## Mapeo GDPR (E5-T03)
+
+`frameworks/gdpr.py` mapea principios y obligaciones del RGPD verificables desde
+las trazas: base legal y finalidad (Art. 5), minimización y limitación del plazo,
+registro de actividades (Art. 30), derecho de acceso (Art. 15), supresión
+(Art. 17) y detección de incidencias (Art. 33).
+
 ## Uso
 
 ```python
@@ -58,5 +65,6 @@ gaps con trazas mínimas.
 
 ## Siguiente
 
-- **E5-T03**: mapeo GDPR. **E5-T05**: generador de informes PDF firmados.
-  **E5-T06**: dashboard de madurez de compliance.
+- **E5-T04**: mapeo ISO/IEC 42001 y NIST AI RMF.
+- **E5-T05**: generador de informes PDF/Word firmados con sello de tiempo.
+- **E5-T06**: dashboard de madurez de compliance.
