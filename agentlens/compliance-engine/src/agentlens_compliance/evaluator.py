@@ -51,6 +51,30 @@ class Report:
     def gaps(self) -> List[RequirementResult]:
         return [r for r in self.results if r.status != Status.COVERED]
 
+    def by_article(self) -> List[Dict[str, Any]]:
+        """Desglose de cobertura por artículo (para el dashboard de madurez)."""
+        order: List[str] = []
+        agg: Dict[str, Dict[str, float]] = {}
+        for r in self.results:
+            art = r.requirement.article
+            if art not in agg:
+                agg[art] = {"total": 0, "covered": 0.0}
+                order.append(art)
+            agg[art]["total"] += 1
+            if r.status == Status.COVERED:
+                agg[art]["covered"] += 1
+            elif r.status == Status.PARTIAL:
+                agg[art]["covered"] += 0.5
+        return [
+            {
+                "article": art,
+                "total": int(agg[art]["total"]),
+                "covered": agg[art]["covered"],
+                "coverage": round(agg[art]["covered"] / agg[art]["total"], 4),
+            }
+            for art in order
+        ]
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "framework": self.framework,

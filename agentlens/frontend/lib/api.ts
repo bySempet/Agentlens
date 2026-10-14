@@ -1,13 +1,16 @@
 // Capa de datos del dashboard. Si AGENTLENS_API_URL está configurada, consulta
 // la API hot path (E3-T01/T02) con la API key; si no, cae a fixtures para poder
 // desarrollar/demostrar el dashboard sin backend.
-import { fixtureCost, fixtureSpans, fixtureTraces } from "./fixtures";
-import type { CostSummary, Span, TraceSummary } from "./types";
+import { fixtureCost, fixtureMaturity, fixtureSpans, fixtureTraces } from "./fixtures";
+import type { CostSummary, MaturitySummary, Span, TraceSummary } from "./types";
 
 const API_URL = process.env.AGENTLENS_API_URL;
 const API_KEY = process.env.AGENTLENS_API_KEY ?? "";
+// Servicio de compliance (opcional); sin él, la vista de compliance usa fixtures.
+const COMPLIANCE_URL = process.env.AGENTLENS_COMPLIANCE_URL;
 
 export const usingFixtures = !API_URL;
+export const complianceUsingFixtures = !COMPLIANCE_URL;
 
 function authHeaders(): HeadersInit {
   return API_KEY ? { Authorization: `Bearer ${API_KEY}` } : {};
@@ -44,6 +47,17 @@ export async function getTrace(traceId: string): Promise<Span[]> {
   }
   const body = await res.json();
   return body.spans as Span[];
+}
+
+export async function getComplianceMaturity(): Promise<MaturitySummary> {
+  if (!COMPLIANCE_URL) {
+    return fixtureMaturity;
+  }
+  const res = await fetch(`${COMPLIANCE_URL}/v1/compliance`, { cache: "no-store" });
+  if (!res.ok) {
+    throw new Error(`compliance -> ${res.status}`);
+  }
+  return (await res.json()) as MaturitySummary;
 }
 
 export async function getCost(): Promise<CostSummary> {

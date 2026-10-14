@@ -50,6 +50,17 @@ a { color: inherit; text-decoration: none; }
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 @media (max-width: 760px) { .grid2 { grid-template-columns: 1fr; } }
 
+/* Compliance / madurez */
+.fw-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+.fw-name { font-size: 15px; font-weight: 600; }
+.fw-score { display: flex; align-items: center; gap: 10px; }
+.fw-pct { font-size: 22px; font-weight: 700; }
+.cov-track { height: 10px; background: var(--panel-2); border-radius: 6px; overflow: hidden; }
+.cov-bar { height: 10px; border-radius: 6px; }
+.cov-bar.ok { background: var(--ok); }
+.cov-bar.mid { background: #d29922; }
+.cov-bar.low { background: var(--err); }
+
 /* Live feed */
 .livefeed { margin: 0 0 16px; }
 .live-status { font-size: 12px; margin-bottom: 8px; }

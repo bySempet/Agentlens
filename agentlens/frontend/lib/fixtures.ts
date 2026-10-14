@@ -1,6 +1,6 @@
 // Datos de ejemplo para desarrollo/demo y para renderizar el dashboard sin un
 // backend en marcha. Se usan cuando AGENTLENS_API_URL no está configurada.
-import type { CostSummary, Span, TraceSummary } from "./types";
+import type { CostSummary, MaturitySummary, Span, TraceSummary } from "./types";
 
 export const fixtureTraces: TraceSummary[] = [
   {
@@ -53,6 +53,40 @@ export const fixtureCost: CostSummary = {
   total_input_tokens: 1_020_000,
   total_output_tokens: 360_000,
   total_cost_usd: 8.2,
+};
+
+export const fixtureMaturity: MaturitySummary = {
+  overall_coverage: 0.86,
+  frameworks: [
+    {
+      framework: "EU AI Act",
+      version: "2024-1689",
+      coverage: 0.9,
+      band: "avanzado",
+      totals: { total: 40, covered: 36, partial: 0, missing: 4 },
+      by_article: [
+        { article: "Art. 12", total: 12, covered: 12, coverage: 1.0 },
+        { article: "Art. 14", total: 8, covered: 6, coverage: 0.75 },
+        { article: "Art. 50", total: 8, covered: 7, coverage: 0.875 },
+        { article: "Art. 86", total: 7, covered: 7, coverage: 1.0 },
+        { article: "Transversal", total: 5, covered: 4, coverage: 0.8 },
+      ],
+    },
+    {
+      framework: "GDPR",
+      version: "2016-679",
+      coverage: 0.82,
+      band: "gestionado",
+      totals: { total: 17, covered: 14, partial: 0, missing: 3 },
+      by_article: [
+        { article: "Art. 5(1)(a)", total: 1, covered: 1, coverage: 1.0 },
+        { article: "Art. 5(1)(c)", total: 1, covered: 1, coverage: 1.0 },
+        { article: "Art. 30", total: 4, covered: 4, coverage: 1.0 },
+        { article: "Art. 15", total: 3, covered: 2, coverage: 0.667 },
+        { article: "Art. 17", total: 2, covered: 1, coverage: 0.5 },
+      ],
+    },
+  ],
 };
 
 export const fixtureSpans: Record<string, Span[]> = {

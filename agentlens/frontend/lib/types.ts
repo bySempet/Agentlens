@@ -54,3 +54,24 @@ export interface CostSummary {
   total_output_tokens: number;
   total_cost_usd: number;
 }
+
+export interface ArticleCoverage {
+  article: string;
+  total: number;
+  covered: number;
+  coverage: number;
+}
+
+export interface FrameworkMaturity {
+  framework: string;
+  version: string;
+  coverage: number;
+  band: string;
+  totals: { total: number; covered: number; partial: number; missing: number };
+  by_article: ArticleCoverage[];
+}
+
+export interface MaturitySummary {
+  overall_coverage: number;
+  frameworks: FrameworkMaturity[];
+}

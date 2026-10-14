@@ -33,3 +33,10 @@ test("la vista de coste muestra agregados por agente y modelo", async ({ page })
   expect(await page.getByTestId("agent-cost").count()).toBeGreaterThanOrEqual(1);
   expect(await page.getByTestId("model-cost").count()).toBeGreaterThanOrEqual(1);
 });
+
+test("la vista de compliance muestra la madurez por framework", async ({ page }) => {
+  await page.goto("/compliance");
+  await expect(page.getByRole("heading", { name: "Compliance" })).toBeVisible();
+  await expect(page.getByTestId("overall")).toBeVisible();
+  expect(await page.getByTestId("framework-card").count()).toBeGreaterThanOrEqual(2);
+});
