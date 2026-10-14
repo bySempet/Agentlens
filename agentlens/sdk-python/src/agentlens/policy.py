@@ -22,6 +22,7 @@ produce una decisión de denegación, nunca un permiso.
 """
 from __future__ import annotations
 
+import ctypes
 import json
 import re
 import tarfile
@@ -98,6 +99,41 @@ def _sprintf(fmt: str, args: list) -> str:
 _BUILTINS: Dict[str, Callable[..., Any]] = {"sprintf": _sprintf}
 
 
+# --- acceso directo a libwasmtime sin soltar el GIL --------------------------------
+#
+# wasmtime-py carga libwasmtime con ``ctypes.cdll``, que suelta el GIL en cada
+# llamada. En un agente con el exporter de spans trabajando en otro hilo, cada
+# suelta puede costar hasta un intervalo de conmutación del GIL (5 ms) antes de
+# recuperarlo: una evaluación hace varias llamadas, así que el p99 se dispara.
+# Cargando la misma librería con ``ctypes.PyDLL`` las llamadas mantienen el GIL
+# (duran microsegundos). Las callbacks del host (builtins) lo re-adquieren sin
+# problema porque ya lo tiene el mismo hilo.
+
+_GIL_FFI: Optional[Dict[str, Any]] = None
+
+
+def _gil_holding_ffi() -> Optional[Dict[str, Any]]:
+    global _GIL_FFI
+    if _GIL_FFI is None:
+        try:
+            from wasmtime import _bindings, _ffi
+
+            lib = ctypes.PyDLL(str(_ffi.filename))
+            fns: Dict[str, Any] = {}
+            for name in ("wasmtime_func_call", "wasmtime_memory_data", "wasmtime_memory_data_size"):
+                fn = getattr(lib, name)
+                ref = getattr(_bindings, "_" + name)
+                fn.argtypes = ref.argtypes
+                fn.restype = ref.restype
+                fns[name] = fn
+            # Dirección base de la memoria como entero.
+            fns["wasmtime_memory_data"].restype = ctypes.c_void_p
+            _GIL_FFI = fns
+        except Exception:  # pragma: no cover - otra versión/plataforma de wasmtime
+            _GIL_FFI = {}
+    return _GIL_FFI or None
+
+
 # --- llamadas rápidas a exports i32 ----------------------------------------------
 
 
@@ -105,10 +141,10 @@ def _i32_caller(wt: Any, store: Any, func: Any) -> Callable[..., int]:
     """Devuelve un invocador de ``func`` (solo i32 -> i32) para el hot path.
 
     ``Func.__call__`` de wasmtime-py reconstruye y compara los tipos de la
-    función en cada llamada (~40 µs). Las firmas del ABI de OPA son todas i32,
-    así que se validan una vez aquí y la llamada va directa a
-    ``wasmtime_func_call`` (unos pocos µs). Si los internos de wasmtime-py no
-    están disponibles, se usa la llamada pública.
+    función en cada llamada (~40 µs) y suelta el GIL. Las firmas del ABI de OPA
+    son todas i32, así que se validan una vez aquí y la llamada va directa a
+    ``wasmtime_func_call`` sin soltar el GIL (unos pocos µs). Si los internos de
+    wasmtime-py no están disponibles, se usa la llamada pública.
     """
     ty = func.type(store)
     i32 = wt.ValType.i32()
@@ -122,7 +158,8 @@ def _i32_caller(wt: Any, store: Any, func: Any) -> Callable[..., int]:
         from wasmtime._func import enter_wasm
         kind = ffi.WASMTIME_I32.value
         raw_func = func._func
-        call = ffi.wasmtime_func_call
+        gil = _gil_holding_ffi()
+        call = gil["wasmtime_func_call"] if gil else ffi.wasmtime_func_call
         params_t = ffi.wasmtime_val_t * n_params
         results_t = ffi.wasmtime_val_t * max(n_results, 1)
     except (ImportError, AttributeError):  # pragma: no cover - otra versión de wasmtime
@@ -232,6 +269,7 @@ class WasmPolicy:
 
         self._store = store
         self._memory = memory
+        self._bind_memory(store, memory)
         instance = wt.Instance(store, self._module, imports)
         exports = instance.exports(store)
 
@@ -267,12 +305,43 @@ class WasmPolicy:
 
     # -- utilidades de memoria --
 
+    def _bind_memory(self, store: Any, memory: Any) -> None:
+        """Lectura/escritura de la memoria lineal sin soltar el GIL si es posible."""
+        gil = _gil_holding_ffi()
+        try:
+            ctx_fn, mem_ref = store._context, ctypes.byref(memory._memory)
+        except AttributeError:  # pragma: no cover - otra versión de wasmtime
+            gil = None
+        if not gil:
+            self._mem_size = lambda: memory.data_len(store)
+            self._mem_read = lambda start, stop: bytes(memory.read(store, start, stop))
+            self._mem_write = lambda raw, addr: memory.write(store, raw, addr)
+            return
+        data_fn, size_fn = gil["wasmtime_memory_data"], gil["wasmtime_memory_data_size"]
+
+        def size() -> int:
+            return size_fn(ctx_fn(), mem_ref)
+
+        def read(start: int, stop: int) -> bytes:
+            if not 0 <= start <= stop <= size():
+                raise PolicyError("lectura fuera de la memoria WASM")
+            # string_at es PYFUNCTYPE: no suelta el GIL. La base se relee porque
+            # la memoria puede haberse movido al crecer.
+            return ctypes.string_at(data_fn(ctx_fn(), mem_ref) + start, stop - start)
+
+        def write(raw: bytes, addr: int) -> None:
+            if not 0 <= addr <= addr + len(raw) <= size():
+                raise PolicyError("escritura fuera de la memoria WASM")
+            (ctypes.c_char * len(raw)).from_address(data_fn(ctx_fn(), mem_ref) + addr)[:] = raw
+
+        self._mem_size, self._mem_read, self._mem_write = size, read, write
+
     def _read_cstr(self, addr: int) -> bytes:
         out = bytearray()
-        size = self._memory.data_len(self._store)
+        size = self._mem_size()
         chunk = 1024
         while addr < size:
-            buf = self._memory.read(self._store, addr, min(addr + chunk, size))
+            buf = self._mem_read(addr, min(addr + chunk, size))
             nul = buf.find(0)
             if nul >= 0:
                 out += buf[:nul]
@@ -287,14 +356,14 @@ class WasmPolicy:
     def _parse_json(self, raw: bytes) -> int:
         ex = self._ex
         addr = ex["opa_malloc"](len(raw))
-        self._memory.write(self._store, raw, addr)
+        self._mem_write(raw, addr)
         value = ex["opa_json_parse"](addr, len(raw))
         if value == 0:
             raise PolicyError("opa_json_parse falló")
         return value
 
     def _ensure_capacity(self, end: int) -> None:
-        size = self._memory.data_len(self._store)
+        size = self._mem_size()
         if end > size:
             self._memory.grow(self._store, (end - size + _WASM_PAGE - 1) // _WASM_PAGE)
 
@@ -340,7 +409,7 @@ class WasmPolicy:
     def _eval_locked(self, raw: bytes) -> Dict[str, Any]:
         input_addr = self._base_heap
         self._ensure_capacity(input_addr + len(raw))
-        self._memory.write(self._store, raw, input_addr)
+        self._mem_write(raw, input_addr)
         result_addr = self._ex["opa_eval"](
             0, self._entrypoint, self._data_addr,
             input_addr, len(raw), input_addr + len(raw), 0,

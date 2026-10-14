@@ -1,17 +1,11 @@
 """Tests del enforcement en el borde (E4-T03).
 
 Ejecutan de verdad el ``policy.wasm`` que compila el Policy Engine (Go) con
-wasmtime. El bundle se construye con ``go run ./cmd/buildbundle`` (o se toma de
-``AGENTLENS_TEST_POLICY_BUNDLE``). Sin Go los tests se saltan, salvo con
-``AGENTLENS_REQUIRE_POLICY_TESTS=1`` (CI), donde saltarlos es un fallo.
+wasmtime. El bundle lo construye el fixture ``go_tools`` de ``conftest.py``.
 """
 import json
-import os
-import shutil
 import subprocess
-import sys
 import threading
-from pathlib import Path
 
 import pytest
 
@@ -25,44 +19,9 @@ from opentelemetry.sdk.trace.export.in_memory_span_exporter import (  # noqa: E4
 )
 from opentelemetry.trace import StatusCode  # noqa: E402
 
-POLICY_ENGINE = Path(__file__).resolve().parents[2] / "policy-engine"
-
-
-def _unavailable(reason):
-    if os.getenv("AGENTLENS_REQUIRE_POLICY_TESTS") == "1":
-        pytest.fail(reason)
-    pytest.skip(reason)
-
-
-@pytest.fixture(scope="session")
-def go_tools(tmp_path_factory):
-    """Construye el bundle WASM y el CLI de referencia ``policyeval``."""
-    out = tmp_path_factory.mktemp("policy")
-    given = os.getenv("AGENTLENS_TEST_POLICY_BUNDLE")
-    if given:
-        return {"bundle": given, "policyeval": None}
-    go = shutil.which("go")
-    if go is None:
-        _unavailable("Go no disponible para compilar el bundle de políticas")
-    bundle = out / "bundle.tar.gz"
-    evaluator = out / "policyeval"
-    subprocess.run([go, "run", "./cmd/buildbundle", "-out", str(bundle)],
-                   cwd=POLICY_ENGINE, check=True, capture_output=True)
-    subprocess.run([go, "build", "-o", str(evaluator), "./cmd/policyeval"],
-                   cwd=POLICY_ENGINE, check=True, capture_output=True)
-    return {"bundle": str(bundle), "policyeval": str(evaluator)}
-
-
 @pytest.fixture(scope="session")
 def wasm_policy(go_tools):
     return WasmPolicy.from_bundle(go_tools["bundle"])
-
-
-@pytest.fixture(autouse=True)
-def no_global_policy():
-    yield
-    # instrument() deja la política como estado global del SDK.
-    sys.modules["agentlens.instrument"]._POLICY = None
 
 
 CASES = [
@@ -256,3 +215,18 @@ def test_missing_bundle_fails_instrument(tmp_path):
     with pytest.raises(PolicyError):
         agentlens.instrument(exporter=InMemorySpanExporter(), auto_instrument=False,
                              policy_bundle=str(tmp_path / "no-existe.tar.gz"))
+
+
+def test_fail_closed_on_real_trap_from_host_builtin(go_tools, monkeypatch):
+    """Un builtin del host que falla provoca un trap real dentro de opa_eval."""
+    def broken_sprintf(fmt, args):
+        raise RuntimeError("sprintf roto")
+
+    monkeypatch.setitem(policy_mod._BUILTINS, "sprintf", broken_sprintf)
+    p = WasmPolicy.from_bundle(go_tools["bundle"])
+    d = p.evaluate({"tool": "shell.exec"})  # la regla de denegación llama a sprintf
+    assert not d.allow
+    assert d.denials[0].startswith("error evaluando la política")
+    # Sin sprintf de por medio la instancia (recreada) sigue funcionando.
+    assert p.evaluate({"tool": "search"}).allow
+    assert not p.evaluate({"tool": "shell.exec"}).allow
