@@ -13,7 +13,8 @@ authors = [{ name = "AgentLens" }]
 keywords = ["compliance", "eu-ai-act", "gdpr", "ai-governance", "observability"]
 
 [project.optional-dependencies]
-dev = ["pytest>=8"]
+pdf = ["reportlab>=4", "cryptography>=41"]
+dev = ["pytest>=8", "reportlab>=4", "cryptography>=41"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

@@ -63,8 +63,23 @@ pip install -e ".[dev]" && pytest -q
 Verifican los 40 puntos, la cobertura total con trazas ricas y la detección de
 gaps con trazas mínimas.
 
+## Informe PDF firmado (E5-T05)
+
+`generate_signed_report(report, "informe.pdf")` genera un **PDF** con el checklist
+y la cobertura, y un sidecar `informe.pdf.sig.json` con el manifiesto firmado
+(**Ed25519**): hash SHA-256 del PDF, cobertura y **sello de tiempo**.
+`verify_signed_report(pdf, sidecar)` recomputa el hash y valida la firma, de modo
+que el informe es **inalterable y verificable** (cualquier cambio lo invalida).
+
+```bash
+cat spans.json | python -m agentlens_compliance --framework eu-ai-act --pdf informe.pdf
+```
+
+Requiere el extra `pdf` (`pip install -e ".[pdf]"`: reportlab + cryptography). El
+resto del paquete funciona sin él.
+
 ## Siguiente
 
 - **E5-T04**: mapeo ISO/IEC 42001 y NIST AI RMF.
-- **E5-T05**: generador de informes PDF/Word firmados con sello de tiempo.
 - **E5-T06**: dashboard de madurez de compliance.
+- **E5-T07**: gestión de evidencias (traza ↔ requisito ↔ informe).

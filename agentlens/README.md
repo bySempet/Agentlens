@@ -55,8 +55,8 @@ Implementado y verificado:
 - **`compliance-engine/`** — Mapeo regulatorio (Python, E5-T01/T02/T03): traduce
   las trazas en evidencia de cumplimiento. Modelo de mapeo versionado + **checklist
   EU AI Act de 40 puntos** (Art. 12/14/50/86) y **mapeo GDPR** (Art. 5/15/17/30/33).
-  Informe con cobertura y gaps; CLI. 8 tests (cobertura plena con trazas ricas,
-  gaps con mínimas).
+  Informe con cobertura y gaps y **PDF firmado (Ed25519) verificable** (E5-T05).
+  CLI. 11 tests (cobertura plena, gaps, PDF firmado + detección de manipulación).
 - **`examples/`** — Agente de ejemplo end-to-end.
 
 ## Estructura objetivo del monorepo
@@ -68,8 +68,8 @@ agentlens/
 ├── shared/          # ✅ módulo Go compartido: keystore (auth) + observability (OTel)
 ├── collector/       # ◻️ config base en deploy/; procesadores Go custom (E2-T02)
 ├── ingestion/       # ✅ Ingestion Gateway (Go) (E2-T05/T06); ⬜ stream processors
-├── compliance-engine/ # ✅ Mapeo regulatorio EU AI Act + GDPR (Python) (E5-T01/02/03)
-├── reporter/        # ⬜ Informes firmados (E5-T05)
+├── compliance-engine/ # ✅ Mapeo EU AI Act + GDPR + informe PDF firmado (E5-T01..T05)
+├── reporter/        # ◻️ informes firmados en compliance-engine (E5-T05)
 ├── forensics/       # ⬜ Reconstrucción de ejecuciones (E6)
 ├── api/             # ✅ API trazas/coste/feed/agentes (Go) (E3-T01/02/05/06/07)
 ├── frontend/        # ✅ Dashboard Next.js (E3-T03/T04/T05/T06): + live feed
@@ -100,11 +100,12 @@ tutorial de integración en 5 pasos (`docs/integration.md`) y workflows de CI y
 release (PyPI Trusted Publishing + npm) en `.github/workflows/`.
 
 **E3 completa** (T01–T07). Avanzan además **E4 (Policy Engine): E4-T01/T02** y
-**E5 (Compliance): E5-T01/T02/T03** (mapeo EU AI Act + GDPR).
-Siguiente paso recomendado: **E5-T05** (informes PDF/Word firmados), **E5-T04**
-(ISO 42001 / NIST AI RMF), **E4-T03** (enforcement en el borde) y **E4-T06** (UI
-de políticas). La publicación a PyPI/npm requiere etiquetar un release y
-configurar los secretos/Trusted Publishing del repositorio.
+**E5 (Compliance): E5-T01/T02/T03 + E5-T05** (mapeo EU AI Act + GDPR e **informe
+PDF firmado y verificable**). Siguiente paso recomendado: **E5-T06** (dashboard de
+madurez de compliance), **E5-T04** (ISO 42001 / NIST AI RMF), **E4-T03**
+(enforcement en el borde) y **E4-T06** (UI de políticas). La publicación a
+PyPI/npm requiere etiquetar un release y configurar los secretos/Trusted
+Publishing del repositorio.
 
 ## Arranque rápido
 
