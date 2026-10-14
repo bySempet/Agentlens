@@ -31,8 +31,8 @@ type Input struct {
 
 // Decision es el resultado de evaluar la política.
 type Decision struct {
-	Allow    bool     `json:"allow"`
-	Denials  []string `json:"denials"`
+	Allow   bool     `json:"allow"`
+	Denials []string `json:"denials"`
 }
 
 // Config son los parámetros data-driven de la política (ajustables por el
@@ -50,6 +50,21 @@ func DefaultConfig() Config {
 	}
 }
 
+// Data devuelve la configuración como documento `data` de OPA (data.config.*).
+// Es la única fuente del documento: la usan el motor en proceso y el bundle WASM.
+func (c Config) Data() map[string]any {
+	blocked := c.BlockedTools
+	if blocked == nil {
+		blocked = []string{}
+	}
+	return map[string]any{
+		"config": map[string]any{
+			"blocked_tools": blocked,
+			"limits":        map[string]any{"max_output_tokens": c.MaxOutputTokens},
+		},
+	}
+}
+
 // Engine evalúa la política base ya compilada.
 type Engine struct {
 	query rego.PreparedEvalQuery
@@ -62,17 +77,10 @@ func New(ctx context.Context, cfg Config) (*Engine, error) {
 		return nil, fmt.Errorf("leyendo política: %w", err)
 	}
 
-	data := map[string]any{
-		"config": map[string]any{
-			"blocked_tools": cfg.BlockedTools,
-			"limits":        map[string]any{"max_output_tokens": cfg.MaxOutputTokens},
-		},
-	}
-
 	query, err := rego.New(
 		rego.Query("data.agentlens.authz"),
 		rego.Module("authz.rego", string(module)),
-		rego.Store(inmem.NewFromObject(data)),
+		rego.Store(inmem.NewFromObject(cfg.Data())),
 	).PrepareForEval(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("compilando política: %w", err)

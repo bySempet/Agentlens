@@ -1,6 +1,7 @@
 // Command buildbundle compila la política Rego a un bundle OPA con WebAssembly
 // (E4-T02), listo para enforcement en el borde (SDK/gateway evalúan el WASM
-// local). Se invoca en CI; la salida es un bundle.tar.gz con policy.wasm.
+// local). Se invoca en CI; la salida es un bundle.tar.gz con policy.wasm y la
+// configuración por defecto (policy.DefaultConfig) como data.json.
 //
 //	go run ./cmd/buildbundle -out build/bundle.tar.gz
 package main
@@ -30,7 +31,7 @@ func main() {
 	}
 	defer f.Close()
 
-	if err := policy.BuildWASMBundle(context.Background(), f, *src, *entrypoint); err != nil {
+	if err := policy.BuildWASMBundle(context.Background(), f, *src, *entrypoint, policy.DefaultConfig()); err != nil {
 		log.Fatalf("%v", err)
 	}
 	log.Printf("bundle WASM escrito en %s (entrypoint=%s)", *out, *entrypoint)
