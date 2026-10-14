@@ -37,7 +37,10 @@ func (s *StaticKeyStore) TenantForKey(apiKey string) (string, bool) {
 }
 
 // ParseSpec interpreta "key1:tenantA,key2:tenantB" como mapa key -> tenant.
-// Devuelve error si algún par está malformado.
+// Devuelve error si algún par está malformado. Un tenant con ':' se rechaza: el
+// formato antiguo "key:tenant:plan" se aceptaría si no como tenant "tenant:plan"
+// y las trazas acabarían selladas con un tenant inexistente (el plan va aparte,
+// en AGENTLENS_GATEWAY_TENANT_PLANS).
 func ParseSpec(raw string) (map[string]string, error) {
 	out := map[string]string{}
 	for _, pair := range strings.Split(raw, ",") {
@@ -48,6 +51,10 @@ func ParseSpec(raw string) (map[string]string, error) {
 		k, t, ok := strings.Cut(pair, ":")
 		if !ok || k == "" || t == "" {
 			return nil, fmt.Errorf("par API key inválido (esperado key:tenant): %q", pair)
+		}
+		if strings.Contains(t, ":") {
+			return nil, fmt.Errorf("tenant inválido en %q: no puede contener ':' "+
+				"(el plan se configura en AGENTLENS_GATEWAY_TENANT_PLANS)", pair)
 		}
 		out[k] = t
 	}

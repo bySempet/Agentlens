@@ -30,7 +30,7 @@ func TestParseSpec_Empty(t *testing.T) {
 }
 
 func TestParseSpec_Invalid(t *testing.T) {
-	for _, bad := range []string{"sintoken", "k:", ":tenant"} {
+	for _, bad := range []string{"sintoken", "k:", ":tenant", "k:acme:growth"} {
 		if _, err := ParseSpec(bad); err == nil {
 			t.Fatalf("%q debería ser inválido", bad)
 		}

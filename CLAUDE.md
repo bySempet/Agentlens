@@ -126,8 +126,10 @@ services:
 ```bash
 docker compose -f deploy/docker-compose.yml -f compose.local.yml up -d
 # El Collector ocupa :4317; el gateway escucha en :4319 y reenvía al Collector.
+# Claves: "key:tenant[,key2:tenant2]"; el plan de cada tenant va en *_TENANT_PLANS.
 (cd ingestion && AGENTLENS_GATEWAY_LISTEN=127.0.0.1:4319 AGENTLENS_GATEWAY_DOWNSTREAM=localhost:4317 \
-  AGENTLENS_GATEWAY_API_KEYS="demo-key:acme-corp:growth" go run ./cmd/gateway) &
+  AGENTLENS_GATEWAY_API_KEYS="demo-key:acme-corp" AGENTLENS_GATEWAY_TENANT_PLANS="acme-corp:growth" \
+  go run ./cmd/gateway) &
 (cd api && AGENTLENS_API_LISTEN=127.0.0.1:8080 AGENTLENS_API_KEYS="demo-key:acme-corp" \
   AGENTLENS_POSTGRES_DSN="postgres://agentlens:agentlens@localhost:5432/agentlens?sslmode=disable" \
   go run ./cmd/api) &
