@@ -13,8 +13,14 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+      # Go compila el bundle WASM de políticas que los tests de E4-T03 ejecutan con wasmtime.
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
       - name: Install & test
         working-directory: agentlens/sdk-python
+        env:
+          AGENTLENS_REQUIRE_POLICY_TESTS: "1"
         run: |
           pip install -e ".[dev]"
           pytest -q

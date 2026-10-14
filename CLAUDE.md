@@ -30,7 +30,7 @@ Policy Engine (Go, OPA/Rego -> bundle WASM)    Compliance Engine (Python: mapeos
 | E1 SDK | **Completa** (T01–T14; Python + `@agentlens/node`) | Publicación real en PyPI/npm requiere tag + secretos |
 | E2 Ingesta | T01, T05, T06, T07, T08 | T02 (Presidio), T03, T04, T09–T13 |
 | E3 API + dashboard | **Completa** (T01–T07) | — |
-| E4 Policy Engine | T01, T02 | **T03 (siguiente: enforcement en el borde con `policy.wasm` vía wasmtime)**, T04–T08 |
+| E4 Policy Engine | T01, T02, T03 (enforcement en el SDK Python con wasmtime) | **T04 (siguiente: sync de políticas control-plane → borde)**, T05–T08; enforcement en el SDK Node y en el gateway |
 | E5 Compliance | T01, T02, T03, T05, T06 | T04 (ISO 42001/NIST), T07 (evidencias) |
 | E6–E12 | — | Sin empezar |
 
@@ -39,6 +39,8 @@ Huecos conocidos:
   **ningún servicio expone ese endpoint**: hoy solo funciona con fixtures.
 - `deploy/docker-compose.yml` publica los puertos en `0.0.0.0`. En la EC2, usar un override
   que los ate a `127.0.0.1` (ver "Stack local").
+- La API (`/v1/traces/{id}`) expone una proyección fija de cada span: las decisiones de
+  política (`agentlens.policy.*`) solo se ven hoy en ClickHouse, no en la API ni en el dashboard.
 - El sello de tiempo del PDF firmado lo declara el firmante (no es un TSA RFC 3161).
 - `reporter/`, `policies/`, `collector/` del README son placeholders: el código vive en
   `compliance-engine/`, `policy-engine/` y `deploy/`.
@@ -62,6 +64,8 @@ Huecos conocidos:
     el listado se consulta vía la vista `agentlens.traces`.
   - El PDF firmado se verifica **contra una clave pública de confianza**, nunca con la que
     trae el sidecar.
+  - El enforcement local es **fail-closed** y el bundle WASM debe llevar su `data.json`
+    (`Config.Data()`): sin configuración la política lo permite todo.
 
 ## Entorno (EC2 Ubuntu 24.04)
 
@@ -102,9 +106,15 @@ docker stop al-pg
 # Esquema ClickHouse sin Docker (chDB)
 pip install chdb && python deploy/clickhouse/verify_schema.py
 
-# Policy engine: CLI (exit 3 = denegado) y bundle WASM
+# Policy engine: CLI (exit 3 = denegado) y bundle WASM (policy.wasm + data.json)
 (cd policy-engine && echo '{"tool":"shell.exec"}' | go run ./cmd/policyeval; \
   go run ./cmd/buildbundle -out build/bundle.tar.gz)
+
+# Enforcement en el borde (E4-T03): los tests del SDK compilan el bundle con Go, lo
+# ejecutan con wasmtime y lo comparan con policyeval. Sin Go se saltan, salvo con:
+(cd sdk-python && AGENTLENS_REQUIRE_POLICY_TESTS=1 pytest -q tests/test_policy.py)
+# Agente que intenta herramientas prohibidas (sin stack: AGENTLENS_CONSOLE=1)
+(cd examples && AGENTLENS_POLICY_BUNDLE=../policy-engine/build/bundle.tar.gz python policy_agent.py)
 
 # Compliance: informe JSON, PDF firmado y verificación con clave de confianza
 python -m agentlens_compliance --keygen firma          # firma.key (0600) + firma.pub

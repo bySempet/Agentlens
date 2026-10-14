@@ -49,6 +49,10 @@ class AgentLensConfig:
     max_queue_size: int = 2048
     max_export_batch_size: int = 512
 
+    # Enforcement en el borde (E4-T03): bundle OPA con policy.wasm evaluado en
+    # local con wasmtime. None = sin enforcement.
+    policy_bundle: Optional[str] = None
+
     # Dev
     console: bool = False  # exporta a consola en lugar de OTLP (útil sin Collector)
 
@@ -65,6 +69,7 @@ class AgentLensConfig:
             redact_pii=_env_bool("AGENTLENS_REDACT_PII", cls.redact_pii),
             payload_mode=os.getenv("AGENTLENS_PAYLOAD_MODE", cls.payload_mode),
             console=_env_bool("AGENTLENS_CONSOLE", cls.console),
+            policy_bundle=os.getenv("AGENTLENS_POLICY_BUNDLE") or None,
         )
         # Los overrides explícitos (no-None) ganan sobre el entorno.
         for k, v in overrides.items():

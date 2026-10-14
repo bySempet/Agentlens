@@ -43,8 +43,19 @@ enforcement en el borde (E4-T03). Se genera en CI:
 
 ```bash
 go run ./cmd/buildbundle -out build/bundle.tar.gz
-# build/bundle.tar.gz contiene policy.wasm (+ data.json, .manifest)
+# build/bundle.tar.gz contiene policy.wasm, data.json (DefaultConfig) y .manifest
 ```
+
+El `data.json` del bundle lleva la configuración (`data.config.*`, generada con
+`Config.Data()`, la misma que usa el motor en proceso). Sin ella el WASM no tendría
+herramientas bloqueadas ni límites y lo permitiría todo.
+
+## Enforcement en el borde (E4-T03)
+
+El SDK Python evalúa el bundle en local con **wasmtime** (`agentlens.policy.WasmPolicy`,
+ver `sdk-python/README.md`). Los tests del SDK compilan el bundle con este módulo y
+comprueban que cada decisión del WASM coincide con la de `cmd/policyeval` (motor
+OPA en Go).
 
 ## Tests
 
@@ -59,5 +70,4 @@ tras compilar).
 
 ## Siguiente
 
-- **E4-T03**: enforcement síncrono en el borde (SDK/gateway evalúa el WASM local).
 - **E4-T04**: sincronización de políticas control-plane → borde.

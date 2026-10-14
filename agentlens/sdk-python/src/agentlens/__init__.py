@@ -7,12 +7,15 @@ from .config import AgentLensConfig
 from .conventions import CONVENTIONS_VERSION, GenAI, normalize_attributes
 from .instrument import (
     agent,
+    check,
+    enforce,
     get_tracer,
     instrument,
     shutdown,
     tool,
 )
 from .instrumentation import ActivationResult, Instrumentor, activate
+from .policy import PolicyDecision, PolicyError, PolicyViolation, WasmPolicy
 from .redaction import Redactor
 
 __version__ = "0.1.0"
@@ -22,6 +25,12 @@ __all__ = [
     "shutdown",
     "agent",
     "tool",
+    "check",
+    "enforce",
+    "PolicyDecision",
+    "PolicyViolation",
+    "PolicyError",
+    "WasmPolicy",
     "get_tracer",
     "Redactor",
     "AgentLensConfig",

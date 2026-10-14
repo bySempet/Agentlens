@@ -46,11 +46,15 @@ Implementado y verificado:
   **live feed**, detalle con **conversación GenAI** y **timeline**, **dashboard de
   coste** y **dashboard de madurez de compliance** (EU AI Act/GDPR). Fallback a
   fixtures. Build + **4 tests E2E Playwright** verificados con Chromium real.
-- **`policy-engine/`** — Policy Engine (Go + OPA/Rego, E4-T01/T02): evalúa decisiones
+- **`policy-engine/`** — Policy Engine (Go + OPA/Rego, E4-T01/T02/T03): evalúa decisiones
   de gobernanza sobre acciones de agentes (herramientas bloqueadas, PII→externo,
   límite de tokens), data-driven y compilado una vez. **Latencia ~60 µs** por
   evaluación (criterio < 5 ms). Compila la política a **bundle WASM** (E4-T02) para
-  enforcement en el borde. Librería + CLIs `policyeval`/`buildbundle`; 9 tests.
+  enforcement en el borde; el bundle lleva la configuración (`data.json`). **Enforcement
+  en el borde (E4-T03)**: el SDK Python ejecuta el `policy.wasm` con **wasmtime** y
+  bloquea la herramienta antes de ejecutarla (p50 ≈ 35–210 µs, p99 < 1 ms, sin llamar
+  al backend); decisiones idénticas al motor Go (test diferencial). Librería + CLIs
+  `policyeval`/`buildbundle`.
 - **`compliance-engine/`** — Mapeo regulatorio (Python, E5-T01..T06): traduce las
   trazas en evidencia de cumplimiento. Modelo versionado + **checklist EU AI Act
   de 40 puntos** (Art. 12/14/50/86) y **mapeo GDPR** (Art. 5/15/17/30/33). Informe
@@ -73,7 +77,7 @@ agentlens/
 ├── forensics/       # ⬜ Reconstrucción de ejecuciones (E6)
 ├── api/             # ✅ API trazas/coste/feed/agentes (Go) (E3-T01/02/05/06/07)
 ├── frontend/        # ✅ Dashboard Next.js: trazas/coste/live feed + compliance (E5-T06)
-├── policy-engine/   # ✅ Motor OPA/Rego + bundle WASM (Go) (E4-T01/T02)
+├── policy-engine/   # ✅ Motor OPA/Rego + bundle WASM (Go) (E4-T01/T02); enforcement en SDK (E4-T03)
 ├── policies/        # ◻️ política base + bundle WASM en policy-engine/ (E4-T02)
 └── deploy/          # ✅ docker-compose + ClickHouse (E2-T07) + PostgreSQL (E2-T08); ◻️ Helm
 ```
@@ -99,11 +103,11 @@ dashboard) está completo de extremo a extremo, y ambos SDKs (Python + Node) est
 tutorial de integración en 5 pasos (`docs/integration.md`) y workflows de CI y
 release (PyPI Trusted Publishing + npm) en `.github/workflows/`.
 
-**E3 completa** (T01–T07). Avanzan además **E4 (Policy Engine): E4-T01/T02** y
+**E3 completa** (T01–T07). Avanzan además **E4 (Policy Engine): E4-T01/T02/T03** y
 **E5 (Compliance): E5-T01/T02/T03 + E5-T05/T06** (mapeo EU AI Act + GDPR, **informe
 PDF firmado y verificable** y **dashboard de madurez**). Siguiente paso: **E5-T07**
-(gestión de evidencias), **E5-T04** (ISO 42001 / NIST AI RMF), **E4-T03**
-(enforcement en el borde) y **E4-T06** (UI de políticas). La publicación a
+(gestión de evidencias), **E5-T04** (ISO 42001 / NIST AI RMF), **E4-T04**
+(sincronización de políticas control-plane → borde) y **E4-T06** (UI de políticas). La publicación a
 PyPI/npm requiere etiquetar un release y configurar los secretos/Trusted
 Publishing del repositorio.
 

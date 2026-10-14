@@ -9,12 +9,17 @@ Uso mínimo (las "3 líneas" del brief):
 También expone helpers de instrumentación manual (``agent`` y ``tool``) que
 siguen las convenciones OTel GenAI (spans ``invoke_agent`` y ``execute_tool``),
 útiles cuando no se usa un framework con auto-instrumentación.
+
+Con ``policy_bundle`` (E4-T03) el SDK evalúa en local el ``policy.wasm`` del
+Policy Engine: ``tool()`` bloquea la herramienta antes de ejecutarla si la
+política la deniega, y ``check()`` / ``enforce()`` permiten decidir sobre
+cualquier otra acción.
 """
 from __future__ import annotations
 
 import logging
 from contextlib import contextmanager
-from typing import Optional
+from typing import Any, Optional, Union
 
 from opentelemetry import trace
 from opentelemetry.sdk.resources import Resource
@@ -28,12 +33,22 @@ from opentelemetry.sdk.trace.export import (
 from .config import AgentLensConfig
 from .conventions import CONVENTIONS_VERSION, GenAI
 from .instrumentation import activate as activate_instrumentation
+from .policy import (
+    ATTR_POLICY_ALLOW,
+    ATTR_POLICY_DENIALS,
+    ATTR_POLICY_EVAL_US,
+    PolicyDecision,
+    PolicyViolation,
+    WasmPolicy,
+)
 from .processors import AgentLensSpanExporter
 from .redaction import Redactor
 
 logger = logging.getLogger("agentlens")
 
 _PROVIDER: Optional[TracerProvider] = None
+_POLICY: Optional[WasmPolicy] = None
+_IDENTITY: dict = {}
 
 
 def _build_resource(cfg: AgentLensConfig) -> Resource:
@@ -77,13 +92,19 @@ def instrument(
     exporter: Optional[SpanExporter] = None,
     redactor: Optional[Redactor] = None,
     auto_instrument: bool = True,
+    policy_bundle: Optional[Union[str, WasmPolicy]] = None,
 ) -> TracerProvider:
     """Configura AgentLens. Devuelve el ``TracerProvider`` (útil en tests).
 
     ``exporter`` permite inyectar un exporter propio (p.ej. InMemory en tests),
     en cuyo caso se ignora el endpoint OTLP.
+
+    ``policy_bundle`` (ruta a ``bundle.tar.gz`` o un ``WasmPolicy`` ya cargado;
+    también ``AGENTLENS_POLICY_BUNDLE``) activa el enforcement local. Si el
+    bundle no se puede cargar, ``instrument()`` falla: arrancar sin la política
+    pedida dejaría al agente sin control.
     """
-    global _PROVIDER
+    global _PROVIDER, _POLICY, _IDENTITY
 
     cfg = AgentLensConfig.from_env(
         api_key=api_key,
@@ -94,8 +115,17 @@ def instrument(
         redact_pii=redact_pii,
         payload_mode=payload_mode,
         console=console,
+        policy_bundle=policy_bundle if isinstance(policy_bundle, str) else None,
     )
     cfg.validate()
+
+    if isinstance(policy_bundle, WasmPolicy):
+        _POLICY = policy_bundle
+    elif cfg.policy_bundle:
+        _POLICY = WasmPolicy.from_bundle(cfg.policy_bundle)
+    else:
+        _POLICY = None
+    _IDENTITY = {"tenant": cfg.tenant_id or "unknown", "agent": cfg.agent_id}
 
     provider = TracerProvider(resource=_build_resource(cfg))
 
@@ -121,8 +151,9 @@ def instrument(
         logger.info("AgentLens auto-instrumentación -> %s", result.summary())
 
     logger.info(
-        "AgentLens activo (tenant=%s, agent=%s, redact_pii=%s, payload_mode=%s)",
+        "AgentLens activo (tenant=%s, agent=%s, redact_pii=%s, payload_mode=%s, policy=%s)",
         cfg.tenant_id, cfg.agent_id, cfg.redact_pii, cfg.payload_mode,
+        "local-wasm" if _POLICY is not None else "off",
     )
     return provider
 
@@ -146,13 +177,54 @@ def agent(name: str, *, agent_id: Optional[str] = None):
         yield span
 
 
+def check(**action: Any) -> PolicyDecision:
+    """Evalúa una acción contra la política local sin bloquearla.
+
+    ``action`` usa los campos de ``policy.Input`` del Policy Engine (``tool``,
+    ``operation``, ``model``, ``destination``, ``pii_detected``,
+    ``input_tokens``, ``output_tokens``...). ``tenant`` y ``agent`` se rellenan
+    con la identidad de ``instrument()``. Sin política cargada, permite.
+    """
+    if _POLICY is None:
+        return PolicyDecision(allow=True)
+    return _POLICY.evaluate({**_IDENTITY, **action})
+
+
+def enforce(**action: Any) -> PolicyDecision:
+    """Como ``check()``, pero lanza ``PolicyViolation`` si la acción se deniega.
+
+    La decisión queda registrada en el span activo.
+    """
+    decision = check(**action)
+    _record_decision(trace.get_current_span(), decision)
+    if not decision.allow:
+        raise PolicyViolation(decision)
+    return decision
+
+
+def _record_decision(span: Any, decision: PolicyDecision) -> None:
+    if _POLICY is None or not span.is_recording():
+        return
+    span.set_attribute(ATTR_POLICY_ALLOW, decision.allow)
+    span.set_attribute(ATTR_POLICY_EVAL_US, round(decision.eval_us, 1))
+    if decision.denials:
+        span.set_attribute(ATTR_POLICY_DENIALS, list(decision.denials))
+
+
 @contextmanager
-def tool(name: str):
-    """Span ``execute_tool`` (convención OTel GenAI) para instrumentación manual."""
+def tool(name: str, **action: Any):
+    """Span ``execute_tool`` (convención OTel GenAI) para instrumentación manual.
+
+    Con política local cargada, la herramienta se evalúa **antes** de ejecutar el
+    cuerpo del ``with``: si se deniega, el span se marca como error y se lanza
+    ``PolicyViolation`` sin ejecutar la herramienta. ``action`` añade campos al
+    input de la política (p.ej. ``destination="external"``, ``pii_detected=True``).
+    """
     tracer = get_tracer()
     with tracer.start_as_current_span(f"{GenAI.OP_EXECUTE_TOOL} {name}") as span:
         span.set_attribute(GenAI.OPERATION_NAME, GenAI.OP_EXECUTE_TOOL)
         span.set_attribute(GenAI.TOOL_NAME, name)
+        enforce(operation=GenAI.OP_EXECUTE_TOOL, tool=name, **action)
         yield span
 
 

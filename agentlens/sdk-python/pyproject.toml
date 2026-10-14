@@ -34,7 +34,8 @@ openai = ["opentelemetry-instrumentation-openai-v2"]
 langchain = ["opentelemetry-instrumentation-langchain"]
 crewai = ["opentelemetry-instrumentation-crewai"]
 bedrock = ["opentelemetry-instrumentation-bedrock"]
-dev = ["pytest>=8", "pytest-cov"]
+policy = ["wasmtime>=20"]
+dev = ["pytest>=8", "pytest-cov", "wasmtime>=20"]
 
 [project.urls]
 Homepage = "https://github.com/bysempet/agentlens"

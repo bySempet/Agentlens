@@ -45,6 +45,36 @@ with agentlens.agent("support-bot"):          # span invoke_agent
         s.set_attribute("gen_ai.tool.name", "lookup_customer")
 ```
 
+## Enforcement de políticas en el borde (E4-T03)
+
+Con un bundle del Policy Engine (`policy-engine`, `go run ./cmd/buildbundle`), el SDK
+evalúa el `policy.wasm` **en el propio proceso con wasmtime**: la acción se bloquea
+localmente, sin llamar al backend.
+
+```python
+agentlens.instrument(tenant_id="acme", agent_id="support-bot",
+                     policy_bundle="bundle.tar.gz")   # o AGENTLENS_POLICY_BUNDLE
+
+with agentlens.tool("shell.exec"):     # PolicyViolation: el cuerpo no se ejecuta
+    ...
+with agentlens.tool("send_email", destination="external", pii_detected=True):
+    ...                                # bloqueada por minimización de datos (GDPR)
+
+agentlens.check(output_tokens=250_000)    # PolicyDecision(allow=False, denials=[...])
+agentlens.enforce(output_tokens=250_000)  # lanza PolicyViolation
+```
+
+- `tool()` evalúa la herramienta **antes** de ejecutar el cuerpo; los kwargs extra
+  (`destination`, `pii_detected`, `model`, `input_tokens`, `output_tokens`...) se
+  añaden al input de la política. `tenant`/`agent` salen de `instrument()`.
+- La decisión queda en el span: `agentlens.policy.allow`, `agentlens.policy.denials`
+  y `agentlens.policy.eval_us`; un bloqueo marca el span como error.
+- **Fail-closed**: un error al evaluar deniega. Si el bundle no carga,
+  `instrument()` falla en vez de arrancar sin control.
+- Latencia medida (wasmtime, Python 3.11, EC2): p50 ≈ 35 µs al permitir y ≈ 120–210 µs
+  al denegar (los mensajes usan `sprintf`, que aporta el host); p99 < 1 ms.
+- Requiere el extra `policy` (`pip install "agentlens[policy]"`, instala `wasmtime`).
+
 ## Configuración
 
 Por argumentos a `instrument()` o por entorno (`AGENTLENS_*`):
@@ -57,6 +87,7 @@ Por argumentos a `instrument()` o por entorno (`AGENTLENS_*`):
 | `payload_threshold_bytes` | `4096` | Tamaño a partir del cual se externaliza |
 | `flush_interval_ms` | `100` | Periodo de vaciado del batch |
 | `console` | `False` | Exporta a consola (dev sin Collector) |
+| `policy_bundle` | — | Bundle OPA (`bundle.tar.gz`) para enforcement local (E4-T03) |
 
 ## Probarlo localmente
 
